@@ -57,6 +57,10 @@ extension Search {
                 }
             }
             .padding(WeaveMetrics.pagePadding)
+            .onChange(of: search.state.query) { _, query in
+                // A search asked from elsewhere (the menu, --query) shows its words in the field.
+                if state.draft.isEmpty { _state.draft.wrappedValue = query }
+            }
             .frame(maxWidth: 900, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
         }

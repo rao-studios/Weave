@@ -6,7 +6,7 @@
 // OUT:  Support/AppIcon/icon_1024.png (the .icns fallback, via make-iconset.sh),
 //       Support/AppIcon/AppIcon.icon/Assets/icon_1024.png (the layer macOS 26+ draws), and
 //       Sources/WeaveApp/Resources/AppIcon.png (the Dock icon when Weave runs unbundled, and the
-//       app's own mark in the sidebar).
+//       app's own mark in the sidebar), and Docs/README_Assets/icon.png (beside the README's brief).
 // PIN:  The first two are square, opaque and unrounded, like Ambient's, Veil's and Craft's: the
 //       system masks them. The third is drawn on the macOS tile itself (824 of 1024, continuous
 //       corners r 185.4, a soft shadow), since nothing masks an icon set at runtime.
@@ -23,6 +23,8 @@ let squareOutputs = [
     root.appendingPathComponent("Support/AppIcon/AppIcon.icon/Assets/icon_1024.png"),
 ]
 let dockOutput = root.appendingPathComponent("Sources/WeaveApp/Resources/AppIcon.png")
+/// The same tile, beside the README's brief.
+let readmeOutput = root.appendingPathComponent("Docs/README_Assets/icon.png")
 let size = 1024
 let dockSize = 512
 
@@ -152,3 +154,4 @@ let dock = render(dockSize, alpha: true) { context in
     context.strokePath()
 }
 try write(dock, to: dockOutput)
+try write(dock, to: readmeOutput)

@@ -12,13 +12,14 @@ enum StorageAction: Sendable, Equatable {
 }
 
 enum AppMode: String, CaseIterable, Sendable, Hashable {
-    case fabric, explorer, search, settings
+    case fabric, explorer, search, connect, settings
 
     var title: String {
         switch self {
         case .fabric: return "Fabric"
         case .explorer: return "Explorer"
         case .search: return "Search"
+        case .connect: return "Connect"
         case .settings: return "Settings"
         }
     }
@@ -28,6 +29,7 @@ enum AppMode: String, CaseIterable, Sendable, Hashable {
         case .fabric: return "square.grid.3x3"
         case .explorer: return "doc.text.magnifyingglass"
         case .search: return "point.3.connected.trianglepath.dotted"
+        case .connect: return "chevron.left.forwardslash.chevron.right"
         case .settings: return "gearshape"
         }
     }

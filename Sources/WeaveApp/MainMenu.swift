@@ -33,6 +33,7 @@ enum MainMenu {
         file.addItem(item("Choose Folder…", #selector(AppDelegate.chooseRoot(_:)), "o", target))
         file.addItem(item("Reveal Folder in Finder", #selector(AppDelegate.revealRoot(_:)), "", target))
         file.addItem(item("Copy Weave's Port URL", #selector(AppDelegate.copyPortURL(_:)), "", target))
+        file.addItem(item("Request Examples…", #selector(AppDelegate.showConnect(_:)), "", target))
         main.addItem(submenu(file))
 
         let edit = NSMenu(title: "Edit")
@@ -49,6 +50,7 @@ enum MainMenu {
         view.addItem(item("Fabric", #selector(AppDelegate.showFabric(_:)), "1", target))
         view.addItem(item("Explorer", #selector(AppDelegate.showExplorer(_:)), "2", target))
         view.addItem(item("Search", #selector(AppDelegate.showSearch(_:)), "3", target))
+        view.addItem(item("Connect", #selector(AppDelegate.showConnect(_:)), "4", target))
         view.addItem(.separator())
         let sidebar = item("Hide Sidebar", #selector(AppDelegate.toggleSidebarVisibility(_:)), "s", target)
         sidebar.keyEquivalentModifierMask = [.command, .control]

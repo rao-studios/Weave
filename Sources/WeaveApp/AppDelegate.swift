@@ -33,6 +33,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         window.contentMinSize = WeaveMetrics.windowMinSize
         window.center()
         window.setFrameAutosaveName("WeaveMainWindow")
+        // `--window=<w>x<h>`: a fixed size for screenshots, over the remembered one.
+        if let size = ShellOps.argument("--window=", in: CommandLine.arguments)?.split(separator: "x").compactMap({ Double($0) }), size.count == 2 {
+            window.setContentSize(NSSize(width: size[0], height: size[1]))
+            window.center()
+        }
         window.makeKeyAndOrderFront(nil)
         self.window = window
         NSApp.activate()
@@ -55,6 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc func showFabric(_ sender: Any?) { root.show(.fabric) }
     @objc func showExplorer(_ sender: Any?) { root.show(.explorer) }
     @objc func showSearch(_ sender: Any?) { root.show(.search) }
+    @objc func showConnect(_ sender: Any?) { root.showConnect() }
     @objc func showSettings(_ sender: Any?) { root.show(.settings) }
     @objc func toggleSidebarVisibility(_ sender: Any?) { root.toggleSidebar() }
     @objc func copyPortURL(_ sender: Any?) { root.copyPortURL() }

@@ -62,12 +62,18 @@ public struct ThreadHTTPClient: Sendable {
     /// Files `text` under `group` as `ownerId`; the Thread embeds it and extracts its graph on device.
     public func deposit(_ text: String, name: String?, groupID: String, groupLabel: String,
                         ownerId: String = WeaveIdentity.owner) async throws -> DepositReceipt {
+        try await deposit(texts: [text], names: [name], groupID: groupID, groupLabel: groupLabel, ownerId: ownerId)
+    }
+
+    /// Files each text as its own document under `group` as `ownerId`.
+    public func deposit(texts: [String], names: [String?], groupID: String, groupLabel: String,
+                        ownerId: String = WeaveIdentity.owner) async throws -> DepositReceipt {
         struct Group: Encodable { let id: String; let label: String; let owner_id: String }
         struct Thread: Encodable { let owner_id: String; let group: Group }
         struct Body: Encodable { let inputs: [String]; let sanitize: Bool; let thread: Thread; let names: [String?]? }
-        let body = Body(inputs: [text], sanitize: true,
+        let body = Body(inputs: texts, sanitize: true,
                         thread: Thread(owner_id: ownerId, group: Group(id: groupID, label: groupLabel, owner_id: ownerId)),
-                        names: name.map { [$0] })
+                        names: names.contains { $0 != nil } ? names : nil)
         return try await call(DepositReceipt.self, "/v1/batch/embeddings", body: LoopbackHTTP.encode(body), timeout: 180)
     }
 }

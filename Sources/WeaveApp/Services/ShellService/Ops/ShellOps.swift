@@ -23,6 +23,11 @@ enum ShellOps {
         }
     }
 
+    /// The value of `<prefix>value` among the launch arguments.
+    static func argument(_ prefix: String, in arguments: [String]) -> String? {
+        arguments.first { $0.hasPrefix(prefix) }.map { String($0.dropFirst(prefix.count)) }.flatMap { $0.isEmpty ? nil : $0 }
+    }
+
     /// `--mode=<page>` at launch.
     static func launchKinds(_ arguments: [String]) -> [ShellService.Set.Meta.Kind] {
         arguments.compactMap { argument in

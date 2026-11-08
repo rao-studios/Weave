@@ -28,14 +28,20 @@ final class WeaveAppRoot {
     @Relay(.silence) var port: PortService
     @Relay(.silence) var search: SearchService
     @Relay(.silence) var explorer: ExplorerService
+    @Relay(.silence) var connect: ConnectService
 
     private var started = false
+    /// `--explore=<name>` and `--query=<text>`: what the window opens on (the README's screenshots).
+    private var launchExplore: String?
+    private var launchQuery: String?
 
     private init() {}
 
     /// Before the window exists: `--mode=` takes effect.
     func launch(arguments: [String]) {
         for kind in ShellOps.launchKinds(arguments) { shell.set(kind) }
+        launchExplore = ShellOps.argument("--explore=", in: arguments)
+        launchQuery = ShellOps.argument("--query=", in: arguments)
     }
 
     /// The persisted settings restore after the service exists: wait for them.
@@ -65,6 +71,11 @@ final class WeaveAppRoot {
             shell.present(AppError("The host", error))
         }
         host.watch(interval: s.hostPollInterval)
+        if let name = launchExplore, fabric.state.record(name) != nil { explore(.spawned(name)) }
+        if let query = launchQuery {
+            await host.poll()
+            _ = try? await search.query(query, topK: s.searchTopK)
+        }
     }
 
     /// Quit: the loops and the port stop, Weave's lease on the main AII goes. The spawned Threads
@@ -192,6 +203,12 @@ final class WeaveAppRoot {
         explorer.select(ref)
         let explorer = self.explorer
         Task { await explorer.refresh(ref) }
+    }
+
+    /// The Connect page, its examples naming `thread` (a spawned AII, or `main`).
+    func showConnect(_ thread: String? = nil) {
+        if let thread { connect.set(.thread(thread)) }
+        show(.connect)
     }
 
     func rescan() {

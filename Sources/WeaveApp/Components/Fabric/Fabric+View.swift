@@ -43,13 +43,17 @@ extension Fabric {
                                        message: "Spawn one: Weave provisions an AII home in its own folder, gives it its own ports, and starts its Thread with on-device embedding and graph extraction, sharing the models in ~/.rao.")
                         }
                     }
-                    ForEach(f.threads) { record in
-                        ThreadRow(record: record, status: f.status(of: record.name), embedder: f.embedder[record.name],
-                                  extractor: f.extractor[record.name], counts: f.counts[record.name], shape: f.shapes[record.name],
-                                  isHost: h.selection == .spawned(record.name), busy: f.isBusy(record.name),
-                                  needsReseed: f.reseed.contains(record.name), registered: registered(record, h))
-                            .onHover { inside in _state.hovered.wrappedValue = inside ? record.name : nil }
-                            .onBubble { On(.threadRowAction, ThreadRowAction.self) { perform($0) } }
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 330, maximum: 520), spacing: 14, alignment: .top)],
+                              alignment: .leading, spacing: 14) {
+                        ForEach(f.threads) { record in
+                            ThreadRow(record: record, status: f.status(of: record.name), embedder: f.embedder[record.name],
+                                      extractor: f.extractor[record.name], counts: f.counts[record.name], shape: f.shapes[record.name],
+                                      isHost: h.selection == .spawned(record.name), busy: f.isBusy(record.name),
+                                      needsReseed: f.reseed.contains(record.name), registered: registered(record, h))
+                                .frame(minHeight: 278, alignment: .top)
+                                .onHover { inside in _state.hovered.wrappedValue = inside ? record.name : nil }
+                                .onBubble { On(.threadRowAction, ThreadRowAction.self) { perform($0) } }
+                        }
                     }
                 }
 
@@ -60,7 +64,7 @@ extension Fabric {
                 }
             }
             .padding(WeaveMetrics.pagePadding)
-            .frame(maxWidth: 980, alignment: .leading)
+            .frame(maxWidth: 1180, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }

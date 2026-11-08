@@ -155,8 +155,9 @@ struct ThreadSearchPane: View {
                 Card {
                     HStack {
                         Text("#\(hit.rank)").font(.weaveMono(11)).foregroundStyle(Color.weaveAccent)
-                        Text(hit.reference.id).font(.weaveMono(10)).foregroundStyle(Color.weaveInk.opacity(0.45)).lineLimit(1)
                         Spacer()
+                        Text(verbatim: "document \(hit.reference.id.prefix(8))…").font(.weaveMono(9.5)).foregroundStyle(Color.weaveInk.opacity(0.35))
+                            .help(hit.reference.id)
                         Pill(text: hit.reference.ownerId)
                     }
                     Text(hit.text).font(.weaveSans(12.5)).textSelection(.enabled)

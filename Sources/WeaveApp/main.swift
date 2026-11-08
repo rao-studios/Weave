@@ -7,7 +7,9 @@
 //
 //  Arguments: --self-test (a headless exercise of the fabric and the port against a scratch AII
 //  home, prints results, exits 0/1), --e2e <folder> (the whole fabric against this Mac's AII:
-//  see EndToEnd.swift), --mode=<fabric|explorer|search|settings> (open on a page).
+//  see EndToEnd.swift), --demo seed|clear (the README's demo fabric: Demo.swift),
+//  --explore=<name> and --query=<text> (open on that AII, run that search), --window=<w>x<h>,
+//  --mode=<fabric|explorer|search|settings> (open on a page).
 //
 
 import AppKit
@@ -16,7 +18,11 @@ let arguments = CommandLine.arguments
 
 MainActor.assumeIsolated {
     let app = NSApplication.shared
-    if arguments.contains("--e2e") {
+    if arguments.contains("--demo") {
+        app.setActivationPolicy(.prohibited)
+        Task { @MainActor in exit(await Demo.run(arguments: arguments)) }
+        app.run()
+    } else if arguments.contains("--e2e") {
         app.setActivationPolicy(.prohibited)
         Task { @MainActor in exit(await EndToEnd.run(arguments: arguments)) }
         app.run()

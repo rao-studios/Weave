@@ -21,7 +21,8 @@ extension Explorer {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .frame(maxWidth: 560)
+                .fixedSize()
+                .frame(maxWidth: .infinity, alignment: .leading)
                 ScrollView {
                     pane(state.tab, ref: ref, e)
                         .frame(maxWidth: .infinity, alignment: .leading)

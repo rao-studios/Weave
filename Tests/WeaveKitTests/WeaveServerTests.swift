@@ -18,6 +18,18 @@ private struct StubSource: WeaveGatewaySource {
         guard hostUp else { throw FabricError.noHost }
         return WeaveSearchResponse(host: nil, texts: ["echo \(request.query)"], references: [], hits: [], graph: nil)
     }
+    func push(_ request: WeavePushRequest, thread: String) async throws -> WeavePushResponse {
+        guard thread == "alpha" else { throw FabricError.notFound(thread) }
+        return WeavePushResponse(thread: thread, ownerId: WeaveIdentity.owner, group: ThreadGateway.group(thread: thread, label: request.group),
+                                 filed: request.all.count, indexed: true, documents: request.all.count)
+    }
+    func search(_ request: WeaveThreadSearchRequest, thread: String) async throws -> WeaveThreadSearchResponse {
+        guard thread == "alpha" else { throw FabricError.notFound(thread) }
+        return WeaveThreadSearchResponse(thread: thread, hits: [WeaveThreadHit(rank: 1, text: "alpha says \(request.query)", documentId: "d", partitionId: "p")])
+    }
+    func records(thread: String) async throws -> WeaveRecordsResponse {
+        WeaveRecordsResponse(thread: thread, ownerId: WeaveIdentity.owner, groups: [])
+    }
     func secret() -> String? { "s3cret" }
     func served(_ path: String) async {}
 }
@@ -69,6 +81,23 @@ private struct StubSource: WeaveGatewaySource {
         try await serve(StubSource(hostUp: true), port: 47694, requireSecret: false) {
             let status = try await call(47694, "/v1/threads").1
             #expect(status == 200)
+        }
+    }
+
+    @Test func anInsertNamesItsAIIInTheBodyAndASearchCanNameOne() async throws {
+        try await serve(StubSource(hostUp: true), port: 47693) {
+            let (filed, ok) = try await call(47693, "/v1/records", method: "POST",
+                                             body: #"{"thread": "alpha", "text": "loom", "group": "Notes"}"#, secret: "s3cret")
+            #expect(ok == 200 && filed.contains("weave-alpha-notes") && filed.contains("\"indexed\":true"))
+            let viaPath = try await call(47693, "/v1/threads/alpha/records", method: "POST", body: #"{"text": "shuttle"}"#, secret: "s3cret").1
+            let noThread = try await call(47693, "/v1/records", method: "POST", body: #"{"text": "loom"}"#, secret: "s3cret").1
+            let unknown = try await call(47693, "/v1/records", method: "POST", body: #"{"thread": "zeta", "text": "loom"}"#, secret: "s3cret").1
+            let empty = try await call(47693, "/v1/records", method: "POST", body: #"{"thread": "alpha", "text": " "}"#, secret: "s3cret").1
+            #expect(viaPath == 200 && noThread == 400 && unknown == 404 && empty == 400)
+            let (one, found) = try await call(47693, "/v1/search", method: "POST", body: #"{"query": "loom", "thread": "alpha"}"#, secret: "s3cret")
+            #expect(found == 200 && one.contains("alpha says loom") && one.contains("\"thread_name\":\"alpha\""))
+            let records = try await call(47693, "/v1/threads/alpha/records", secret: "s3cret").1
+            #expect(records == 200)
         }
     }
 }

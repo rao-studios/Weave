@@ -6,10 +6,11 @@ Craft's plates.py shoot), from HTML, through the installed Google Chrome driven 
 Inputs:  this folder's rr-mark.png; Playfair Display Italic from ~/Library/Fonts.
 Outputs: hero.png (1200x630 at 2x: 2400x1260) in argv[1].
 
-What it draws follows the app: a query enters Weave's port (127.0.0.1:47600) as a vermilion
-thread, passes through the eye of a needle, the host (the Sewn every woven Thread registered with,
-as the app icon's needle), and fans out to the spawned AIIs' Threads, each on its own slot's port;
-their partitions come back merged by score.
+What it draws follows the app: the spawned AIIs' Threads, each on its own slot's port, come in from
+the left as three strands and pass through the eye of one needle, the host (the Sewn every woven
+Thread registered with, as the app icon's needle), set just after the subtitle's last word; the
+needle, angled, stitches them into a quilt on the right: your query's answer (Weave's port,
+127.0.0.1:47600), one piece pieced from every partition, merged by score.
 """
 
 import math
@@ -53,51 +54,104 @@ ALIGN = f"""document.fonts.ready.then(() => {{ const ctx = document.createElemen
         ctx.font = `italic ${{cs.fontWeight}} ${{cs.fontSize}} Playfair`;
         el.style.left = ({EDGE} - parseFloat(cs.paddingLeft) + ctx.measureText(text[0]).actualBoundingBoxLeft) + 'px'; }} }})"""
 
-# The diagram's geometry.
-PORT_X, LANE_Y = 68, 462
-HOST_X = 560
-ENDS = [(1068, 404, BLUE, "alpha", 47611), (1068, 462, GREEN, "beta", 47621), (1068, 520, ORANGE, "gamma", 47631)]
+# The diagram's geometry: the strands start at the left edge, below the subtitle; the needle's eye sits
+# level with the middle strand, starting where the subtitle's last word ends; the needle leans up to
+# the right, its tip leading to the port.
+EYE_X, EYE_Y = 826, 438
+NEEDLE_ANGLE = 45           # degrees from horizontal, tip down and to the right
+NEEDLE_BACK, NEEDLE_FRONT = 14, 150   # from the eye to the head, and to the tip, along the needle
+# The quilt the needle writes on: 3 x 3 patches, laid down in perspective (CSS 3D: tilted away, turned a
+# little) so it is seen side-on, like cloth on a table. The page measures where the stitch starts on the
+# warped quilt and moves the quilt so that point sits under the needle's tip. QUILT_AT is the quilt's
+# centre before that move: to the right, balancing the plate.
+QUILT_CELL = 54
+QUILT_TILT, QUILT_TURN, QUILT_DEPTH = 58, -26, 700
+QUILT_AT = (1010, 520)
+STITCH_FROM = (0.08, 0.56)      # where the stitch starts, as fractions of the flat quilt
+STRAND_X = 78
+ENDS = [(STRAND_X, 446, BLUE, "alpha", 47611), (STRAND_X, 484, GREEN, "beta", 47621), (STRAND_X, 522, ORANGE, "gamma", 47631)]
 
 
 def strand(x0, y0, x1, y1):
-    """A thread from the host to a Thread: leaves level, bends, arrives level."""
-    mid = (x0 + x1) / 2
-    return f"M{x0},{y0} C{mid},{y0} {mid},{y1} {x1},{y1}"
+    """A Thread from its node on the left into the eye: it runs level, then rises late, clear of the words."""
+    return f"M{x0},{y0} C{x1 - 330},{y0} {x1 - 120},{y1} {x1},{y1}"
 
 
-def weave_marks(y, x0, x1, colour, step=26):
-    """Small over-under ticks across a strand, so the lane reads as cloth."""
-    marks = []
-    x = x0 + step
-    i = 0
-    while x < x1 - step / 2:
-        dy = 7 if i % 2 == 0 else -7
-        marks.append(f'<line x1="{x}" y1="{y - dy}" x2="{x}" y2="{y + dy}" stroke="{colour}" stroke-opacity=".28" stroke-width="2" stroke-linecap="round"/>')
-        x += step
-        i += 1
-    return "".join(marks)
+def along(distance):
+    """A point on the needle's axis, `distance` from the eye (positive toward the tip)."""
+    a = math.radians(NEEDLE_ANGLE)
+    return EYE_X + distance * math.cos(a), EYE_Y + distance * math.sin(a)
 
 
 def hero(browser):
     strands = "".join(
-        f'<path d="{strand(HOST_X + 4, LANE_Y, x - 11, y)}" fill="none" stroke="{colour}" stroke-width="3.4" stroke-linecap="round"/>'
+        f'<path d="{strand(x + 11, y, EYE_X + 1, EYE_Y)}" fill="none" stroke="{colour}" stroke-width="3.4" stroke-linecap="round"/>'
         f'<circle cx="{x}" cy="{y}" r="9.5" fill="none" stroke="{colour}" stroke-width="2.4"/>'
         f'<circle cx="{x}" cy="{y}" r="3.6" fill="{colour}"/>'
         for x, y, colour, _, _ in ENDS)
     labels = "".join(
-        f'<div class="node" style="left:{x - 168}px; top:{y - 33}px"><b>{name}</b> <span>:{port}</span></div>'
+        f'<div class="node" style="left:{x + 18}px; top:{y - 35}px"><b>{name}</b> <span>:{port}</span></div>'
         for x, y, _, name, port in ENDS)
-    query = (f'<line x1="{PORT_X + 8}" y1="{LANE_Y}" x2="{HOST_X}" y2="{LANE_Y}" stroke="{VERMILION}" stroke-width="3" '
-             f'stroke-linecap="round" stroke-dasharray="14 9"/>'
-             + f'<rect x="{PORT_X - 6}" y="{LANE_Y - 8}" width="14" height="16" rx="3" fill="none" stroke="{LINE}" stroke-width="2.2"/>')
-    # The host: the icon's steel needle, upright and leaning, the query's thread through its eye.
-    host = (f'<g transform="translate({HOST_X} {LANE_Y}) rotate(-58) scale(1.4)">'
-            '<path d="M-60 2.2L-48 3.6L9 3.8Q14 3.8 14 0.6Q14 -2.6 9 -2.6L-48 -2.2Z" fill="#000" fill-opacity=".35" transform="translate(2 3)"/>'
-            '<path d="M-60 0L-48 -2.6L9 -3.2Q14.5 -3.2 14.5 0Q14.5 3.2 9 3.2L-48 2.6Z" fill="url(#steel)"/>'
-            '<path d="M-46 -1.5L8 -1.9" stroke="#fff" stroke-opacity=".7" stroke-width=".9" stroke-linecap="round"/>'
-            '<rect x="-3.5" y="-1" width="9" height="2" rx="1" fill="#121211"/>'
-            '</g>'
-            f'<circle cx="{HOST_X}" cy="{LANE_Y}" r="3.4" fill="{VERMILION}"/>')
+
+    # The needle, drawn on its own axis (the eye at 0, the head at -BACK, the tip at +FRONT), then
+    # rotated into place about the eye.
+    back, front, w = NEEDLE_BACK, NEEDLE_FRONT, 5.4
+    body = (f'M{-back - 6},0 Q{-back - 6},{-w} {-back + 2},{-w} L{front - 34},{-w * 0.75} L{front},0 '
+            f'L{front - 34},{w * 0.75} L{-back + 2},{w} Q{-back - 6},{w} {-back - 6},0 Z')
+    needle = (f'<g transform="translate({EYE_X} {EYE_Y}) rotate({NEEDLE_ANGLE})">'
+              f'<path d="{body}" fill="#000" fill-opacity=".38" transform="translate(2 4)"/>'
+              f'<path d="{body}" fill="url(#steel)"/>'
+              f'<path d="M{-back + 2},{-w * 0.45} L{front - 40},{-w * 0.35}" stroke="#fff" stroke-opacity=".75" stroke-width="1.2" stroke-linecap="round"/>'
+              # The eye, with the three threads showing through it.
+              f'<rect x="-8" y="-1.9" width="16" height="3.8" rx="1.9" fill="#121211"/>'
+              f'<rect x="-3" y="-1.9" width="6" height="3.8" fill="{VERMILION}"/>'
+              '</g>')
+
+    # The quilt, flat: nine patches in the Threads' colours and cream, each quilted with a stitched inset
+    # and a diagonal, bound in cream; then the running stitch the needle is writing, in the quilting's own
+    # hand, from under the tip across the middle row and away.
+    cell = QUILT_CELL
+    side = 3 * cell
+    palette = [("#e7dfcd", 1), (BLUE, .55), ("#e7dfcd", 1),
+               (GREEN, .5), ("#efe8d9", 1), (ORANGE, .55),
+               ("#e7dfcd", 1), (GOLD, .6), ("#e7dfcd", 1)]
+    patches = f'<rect x="0" y="0" width="{side}" height="{side}" fill="#efe8d9"/>'
+    for i, (colour, opacity) in enumerate(palette):
+        x, y = (i % 3) * cell, (i // 3) * cell
+        patches += (f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" fill="{colour}" fill-opacity="{opacity}"/>'
+                    f'<rect x="{x + 6}" y="{y + 6}" width="{cell - 12}" height="{cell - 12}" fill="none" stroke="#fffaf0" '
+                    f'stroke-opacity=".75" stroke-width="1.3" stroke-dasharray="4 3"/>'
+                    f'<path d="M{x + 11},{y + cell - 11} L{x + cell - 11},{y + 11}" stroke="#fffaf0" stroke-opacity=".5" '
+                    f'stroke-width="1.2" stroke-dasharray="4 3"/>')
+    seams = "".join(f'<line x1="{k * cell}" y1="0" x2="{k * cell}" y2="{side}" stroke="#2a2a26" stroke-opacity=".3" stroke-width="1.2"/>'
+                    f'<line x1="0" y1="{k * cell}" x2="{side}" y2="{k * cell}" stroke="#2a2a26" stroke-opacity=".3" stroke-width="1.2"/>'
+                    for k in (1, 2))
+    sx, sy = STITCH_FROM[0] * side, STITCH_FROM[1] * side
+    run = (f'<line x1="{sx}" y1="{sy}" x2="{side - 12}" y2="{sy}" stroke="{VERMILION}" stroke-opacity=".85" '
+           f'stroke-width="2.4" stroke-linecap="round" stroke-dasharray="7 5"/>'
+           f'<circle id="stitch-start" cx="{sx}" cy="{sy}" r="0.5" fill="none"/>')
+    flat = (f'<svg width="{side}" height="{side}" viewBox="0 0 {side} {side}">{patches}{seams}{run}'
+            f'<rect x="1.5" y="1.5" width="{side - 3}" height="{side - 3}" rx="3" fill="none" stroke="#efe8d9" stroke-width="3"/></svg>')
+    warp = f"perspective({QUILT_DEPTH}px) rotateX({QUILT_TILT}deg) rotateZ({QUILT_TURN}deg)"
+    quilt = (f'<div id="quilt" class="quilt" style="left:{QUILT_AT[0] - side / 2}px; top:{QUILT_AT[1] - side / 2}px; width:{side}px; height:{side}px">'
+             # The cloth's thickness: the same quilt, darker, a little lower, under the top.
+             f'<div class="ply edge" style="transform:{warp}"></div>'
+             f'<div class="ply" style="transform:{warp}">{flat}</div>'
+             '</div>')
+    tip_x, tip_y = along(NEEDLE_FRONT)
+    place = f"""<script>
+(() => {{
+  const quilt = document.getElementById("quilt"), mark = document.getElementById("stitch-start").getBoundingClientRect();
+  const dx = {tip_x:.1f} - (mark.left + mark.width / 2), dy = {tip_y:.1f} - (mark.top + mark.height / 2);
+  quilt.style.left = (parseFloat(quilt.style.left) + dx) + "px";
+  quilt.style.top = (parseFloat(quilt.style.top) + dy) + "px";
+  const box = quilt.querySelector(".ply:last-child").getBoundingClientRect();
+  const label = document.getElementById("quilt-label");
+  label.style.left = (box.right - label.offsetWidth) + "px";
+  label.style.top = (box.top - 92) + "px";
+}})();
+</script>"""
+
     page = f"""<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face {{ font-family: "Playfair"; font-style: italic; font-weight: 400 900; src: url("file://{PLAYFAIR}") format("truetype"), local("Playfair Display Italic"); }}
 html, body {{ margin: 0; width: 1200px; height: 630px; overflow: hidden; }}
@@ -110,17 +164,23 @@ body {{ position: relative; font-family: "Playfair", Georgia, serif; font-style:
          -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: 30px; }}
 .sub {{ position: absolute; left: 65.5px; top: 334px; font-size: 40px; color: #9b9991; }}
 svg {{ position: absolute; left: 0; top: 0; }}
-.lab {{ position: absolute; font-size: 19px; color: #8b8a84; }}
+.lab {{ position: absolute; font-size: 19px; color: #8b8a84; white-space: nowrap; }}
 .lab b {{ font-weight: 400; color: #e9e7e0; }}
+.quilted {{ line-height: 1.3; text-align: right; }}
+.quilt {{ position: absolute; filter: drop-shadow(0 10px 12px rgba(0,0,0,.55)); }}
+.ply {{ position: absolute; inset: 0; transform-origin: 50% 50%; }}
+.ply.edge {{ top: 7px; bottom: -7px; background: #b9ad94; border-radius: 4px; }}
+svg.over {{ position: absolute; left: 0; top: 0; pointer-events: none; }}
+.small {{ font-size: 15.5px; color: #8b8a84; }}
 .code {{ font-family: {MONO}; font-style: normal; font-size: 13px; color: #8b8a84; letter-spacing: .02em; }}
-.node {{ position: absolute; width: 150px; text-align: right; font-size: 19px; color: #8b8a84; }}
+.node {{ position: absolute; white-space: nowrap; font-size: 19px; color: #8b8a84; }}
 .node b {{ font-weight: 400; color: #e9e7e0; }}
 .node span {{ font-family: {MONO}; font-style: normal; font-size: 12.5px; }}
 .legend {{ position: absolute; left: 66px; top: 556px; width: 1068px; display: flex; gap: 30px; align-items: baseline; font-size: 23px; color: #8b8a84; }}
 .legend b {{ font-weight: 400; color: #e9e7e0; }}
 .dot {{ display: inline-block; width: 13px; height: 13px; border-radius: 50%; margin-right: 10px; transform: translateY(-1px); }}
-.needle {{ display: inline-block; width: 26px; height: 4px; border-radius: 2px 6px 6px 2px; margin-right: 10px; transform: translateY(-5px) rotate(-30deg);
-           background: linear-gradient(180deg, #f4f5f7, #c3c8cf 45%, #7f858e); }}
+.needle {{ display: inline-block; width: 26px; height: 4px; margin: 0 10px 0 2px; transform: translateY(-6px) rotate({NEEDLE_ANGLE}deg);
+           background: linear-gradient(180deg, #f4f5f7, #c3c8cf 45%, #7f858e); clip-path: polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%); border-radius: 2px 0 0 2px; }}
 .tag {{ margin-left: auto; }}
 </style></head><body>
 <img class="mark" src="rr-mark.png">
@@ -129,17 +189,21 @@ svg {{ position: absolute; left: 0; top: 0; }}
 <div class="sub">spawn AIIs, and search every Thread as one</div>
 <svg width="1200" height="630"><defs><linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
 <stop offset="0" stop-color="#f4f5f7"/><stop offset=".45" stop-color="#c3c8cf"/><stop offset="1" stop-color="#7f858e"/></linearGradient></defs>
-{query}{strands}{host}</svg>
-<div class="lab" style="left:{PORT_X - 2}px; top:{LANE_Y - 44}px"><b>your query</b> <span class="code">:47600</span></div>
-<div class="lab" style="left:{HOST_X + 22}px; top:{LANE_Y + 22}px"><b>the host</b></div>
+{strands}</svg>
+{quilt}
+<svg class="over" width="1200" height="630"><defs><linearGradient id="steel2" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#f4f5f7"/><stop offset=".45" stop-color="#c3c8cf"/><stop offset="1" stop-color="#7f858e"/></linearGradient></defs>
+{needle.replace("url(#steel)", "url(#steel2)")}</svg>
 {labels}
+<div class="lab" style="left:{EYE_X - 28}px; top:{EYE_Y - 52}px"><b>the host</b></div>
+<div id="quilt-label" class="lab quilted"><b>your query</b> <span class="code">:47600</span><br><span class="small">every partition, merged by score</span></div>
 <div class="legend">
   <span><i class="needle"></i><b>host</b> · a Sewn</span>
   <span><i class="dot" style="background:{BLUE}"></i><b>alpha</b></span>
   <span><i class="dot" style="background:{GREEN}"></i><b>beta</b></span>
   <span><i class="dot" style="background:{ORANGE}"></i><b>gamma</b> · Threads</span>
-  <span class="tag">one query, every partition, merged by score</span>
 </div>
+{place}
 </body></html>"""
     shoot(browser, page, os.path.join(OUT, "hero.png"), prepare=ALIGN)
 

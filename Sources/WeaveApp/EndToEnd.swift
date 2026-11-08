@@ -10,6 +10,8 @@
 //    3. deposit a distinct note into each, filed as local-weave;
 //    4. one federated search through the main Sewn finds both partitions, named by instance,
 //       and Weave's own port answers the same; Ambient's scope does not see Weave's nodes;
+//    4b. the Connect page's examples, run as another app runs them: curl, the JavaScript client under
+//        Node, the Swift client compiled; a record filed into alpha is found by a search right after;
 //    5. make alpha the host: its own Sewn comes up, both Threads move onto it, the search holds;
 //    6. back to the main AII, then stop, remove, and let the lease go.
 //
@@ -101,6 +103,42 @@ enum EndToEnd {
                                                       LoopbackHTTP.request(port: testPort, path: "/v1/search", body: body, secret: secret, timeout: 90))
             check(Set(viaPort.hits.filter { $0.text.contains(marker) }.compactMap(\.threadName)) == ["alpha", "beta"],
                   "Weave's port answers the same, named by instance")
+
+            step("the Connect page's examples, as another app runs them")
+            let examples = RequestExamples.all(thread: "alpha")
+            func curl(_ kind: RequestExample.Kind) async -> String {
+                await Shell.run(RequestExamples.code(examples.first { $0.kind == kind }!, format: .curl, port: testPort, requireSecret: true))
+            }
+            let listed = await curl(.threads)
+            check(listed.contains(#""id":"alpha""#) && listed.contains(#""id":"main""#), "curl: the AIIs to file into, with their ids")
+            let filed = await curl(.insert)
+            check(filed.contains(#""indexed":true"#), "curl: a record filed into alpha, searchable on return\(filed.contains(#""indexed":true"#) ? "" : "\n    \(filed)")")
+            let foundOne = await curl(.searchOne)
+            check(foundOne.contains("reads a chain of punched cards"), "curl: searched straight after, alpha returns it\(foundOne.contains("punched cards") ? "" : "\n    \(foundOne.prefix(400))")")
+            check(await curl(.searchAll).contains(#""thread_name":"alpha""#), "curl: the search across every AII names alpha")
+            check(await curl(.records).contains("weave-alpha-notes"), "curl: alpha's records list the new group")
+
+            let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("weave-connect-\(marker)", isDirectory: true)
+            try? FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: scratch) }
+            let swiftFile = scratch.appendingPathComponent("main.swift")
+            let swiftCalls = examples.map { RequestExamples.code($0, format: .swift, port: testPort, requireSecret: true) }
+            try (RequestExamples.client(format: .swift, port: testPort, requireSecret: true)! + "\n\nfunc examples() async throws {\n"
+                 + swiftCalls.map { "do {\n\($0)\n}" }.joined(separator: "\n") + "\n}\n").write(to: swiftFile, atomically: true, encoding: .utf8)
+            let typecheck = await Shell.run("xcrun swiftc -typecheck \"\(swiftFile.path)\" 2>&1; echo exit=$?")
+            check(typecheck.contains("exit=0"), "Swift: WeaveService and every call compile\(typecheck.contains("exit=0") ? "" : "\n\(typecheck)")")
+
+            if await !Shell.run("command -v node").isEmpty {
+                try RequestExamples.client(format: .javascript, port: testPort, requireSecret: true)!
+                    .write(to: scratch.appendingPathComponent("weave.mjs"), atomically: true, encoding: .utf8)
+                let calls = [RequestExample.Kind.insert, .searchOne].map { kind in
+                    RequestExamples.code(examples.first { $0.kind == kind }!, format: .javascript, port: testPort, requireSecret: true)
+                }
+                try ("import { weave } from \"./weave.mjs\";\n" + calls.joined(separator: "\n"))
+                    .write(to: scratch.appendingPathComponent("run.mjs"), atomically: true, encoding: .utf8)
+                let ran = await Shell.run("cd \"\(scratch.path)\" && node run.mjs 2>&1; echo exit=$?")
+                check(ran.contains("true") && ran.contains("punched cards"), "JavaScript: weave() files and finds a record\(ran.contains("punched cards") ? "" : "\n    \(ran.prefix(400))")")
+            }
             port.stop()
 
             step("alpha as the host")
@@ -149,5 +187,26 @@ enum EndToEnd {
             try? await TaskSleep.seconds(1)
         }
         return await condition()
+    }
+}
+
+/// A shell command's output, for the examples run as another app runs them. Off the main thread:
+/// Weave's port answers through it, so a command waited on there would never be answered.
+enum Shell {
+    static func run(_ command: String) async -> String {
+        await Task.detached { runNow(command) }.value
+    }
+
+    private static func runNow(_ command: String) -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-c", command]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        do { try process.run() } catch { return "" }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        return String(decoding: data, as: UTF8.self)
     }
 }

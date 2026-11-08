@@ -22,6 +22,7 @@ extension Root {
                 Fabric().paneVisible(mode == .fabric)
                 Explorer().paneVisible(mode == .explorer)
                 Search().paneVisible(mode == .search)
+                Connect().paneVisible(mode == .connect)
                 Settings().paneVisible(mode == .settings)
             }
             .frame(minWidth: WeaveMetrics.detailMinWidth, maxWidth: .infinity, maxHeight: .infinity)

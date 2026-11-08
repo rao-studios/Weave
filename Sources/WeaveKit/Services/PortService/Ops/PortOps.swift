@@ -51,12 +51,25 @@ public enum PortOps {
             let node = snapshot.host.nodes.first { $0.httpPort == record.threadHTTP }.map {
                 WeaveThreadEntry.Node(threadId: $0.threadId, isActive: $0.isActive, acceptingStorage: $0.acceptingStorage)
             }
-            return WeaveThreadEntry(name: record.name, home: record.home, httpPort: record.threadHTTP, grpcPort: record.threadGRPC,
-                                    status: snapshot.fabric.status(of: record.name).label, woven: record.woven,
+            let status = snapshot.fabric.status(of: record.name)
+            return WeaveThreadEntry(id: record.name, label: record.name, home: record.home, httpPort: record.threadHTTP,
+                                    grpcPort: record.threadGRPC, status: status.label, woven: record.woven,
                                     embedder: snapshot.fabric.embedder[record.name]?.phase.rawValue,
-                                    documents: snapshot.fabric.counts[record.name]?.documents, node: node)
+                                    documents: snapshot.fabric.counts[record.name]?.documents, node: node, accepting: status.isUp)
         }
-        return WeaveThreads(host: snapshot.hostInfo, ownerId: WeaveIdentity.owner, threads: entries)
+        return WeaveThreads(host: snapshot.hostInfo, ownerId: WeaveIdentity.owner, threads: entries + [main(snapshot)])
+    }
+
+    /// The main AII's Thread, as a push target (`main`): up when the host sees it.
+    static func main(_ snapshot: PortOps.Snapshot, home: AIIHome = .resolved()) -> WeaveThreadEntry {
+        let ports = AIIConfig.load(home: home).threadPorts
+        let node = snapshot.host.nodes.first { $0.httpPort == ports.http }
+        let up = node?.isActive ?? false
+        return WeaveThreadEntry(id: ThreadGateway.mainName, label: "main AII", home: PrivateFile.path(home.root), httpPort: ports.http,
+                                grpcPort: ports.grpc, status: node == nil ? "unknown" : (up ? "up" : "stopped"), woven: true,
+                                embedder: nil, documents: nil,
+                                node: node.map { WeaveThreadEntry.Node(threadId: $0.threadId, isActive: $0.isActive, acceptingStorage: $0.acceptingStorage) },
+                                accepting: up)
     }
 
     public static func searchResponse(_ response: SewnSearchResponse, snapshot: Snapshot, mainThreadHTTP: Int?) -> WeaveSearchResponse {
@@ -86,6 +99,22 @@ struct LiveGatewaySource: WeaveGatewaySource {
         guard let target = snapshot.host.target, snapshot.host.sewn.isUp else { throw FabricError.noHost }
         let response = try await SewnHTTPClient.forTarget(target).search(request.query, topK: request.topK ?? 10)
         return PortOps.searchResponse(response, snapshot: snapshot, mainThreadHTTP: SearchOps.mainThreadHTTP())
+    }
+
+    func push(_ request: WeavePushRequest, thread: String) async throws -> WeavePushResponse {
+        try await ThreadGateway.push(request, thread: thread, endpoint: endpoint(thread, await snapshot()))
+    }
+
+    func search(_ request: WeaveThreadSearchRequest, thread: String) async throws -> WeaveThreadSearchResponse {
+        try await ThreadGateway.search(request, thread: thread, endpoint: endpoint(thread, await snapshot()))
+    }
+
+    func records(thread: String) async throws -> WeaveRecordsResponse {
+        try await ThreadGateway.records(thread: thread, endpoint: endpoint(thread, await snapshot()))
+    }
+
+    private func endpoint(_ thread: String, _ snapshot: PortOps.Snapshot) throws -> ExplorerOps.Endpoint {
+        try ExplorerOps.endpoint(ThreadGateway.ref(thread), records: snapshot.fabric.threads)
     }
 
     func secret() -> String? { try? AIIHome.resolved().readSecret(for: WeaveIdentity.app) }

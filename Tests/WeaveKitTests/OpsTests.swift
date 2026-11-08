@@ -127,9 +127,11 @@ import WeaveKitTestSupport
         host.nodes = [Fixtures.node("n1", httpPort: 47611)]
         let threads = PortOps.threads(PortOps.Snapshot(port: 47600, host: host, fabric: fabric))
         #expect(threads.ownerId == WeaveIdentity.owner)
-        #expect(threads.threads.map(\.name) == ["alpha", "beta"])
+        #expect(threads.threads.map(\.id) == ["alpha", "beta", "main"], "every spawned AII, then the main AII")
         #expect(threads.threads[0].node?.threadId == "n1" && threads.threads[0].documents == 5 && threads.threads[0].status == "up")
+        #expect(threads.threads[0].accepting && !threads.threads[1].accepting)
         #expect(threads.threads[1].node == nil && !threads.threads[1].woven)
+        #expect(threads.threads[2].label == "main AII" && threads.insert.contains("/v1/records"))
     }
 
     @Test func aReplacedServersLateWriteIsDropped() {

@@ -1,12 +1,20 @@
-[![Weave, by Rao Studios: spawn AIIs, and search every Thread as one. On a warm black plate, the title Weave in silver italic; beneath it a query leaves Weave's port, 47600, as a vermilion thread, passes through the eye of a steel needle, the host, and fans out into three coloured threads ending at three Threads, alpha on 47611, beta on 47621 and gamma on 47631. The legend reads: host, a Sewn; alpha, beta, gamma, Threads; one query, every partition, merged by score.](Docs/README_Assets/hero.png)](Docs/README_Assets/hero.png)
+[![Weave, by Rao Studios: spawn AIIs, and search every Thread as one. On a warm black plate, the title Weave in silver italic. Below it, three coloured threads start at the left, at three Threads, alpha on 47611, beta on 47621 and gamma on 47631, and sweep right into the eye of a steel needle leaning 45 degrees down to the right, the host, level with the middle strand and just past the subtitle's last word; the needle writes them onto a small patchwork quilt in their colours, laid in perspective like cloth on a table, labelled your query on Weave's port, 47600: every partition, merged by score. The legend reads: host, a Sewn; alpha, beta, gamma, Threads.](Docs/README_Assets/hero.png)](Docs/README_Assets/hero.png)
 
 # Weave
+
+<img src="Docs/README_Assets/icon.png" alt="Weave's app icon: a cream knitted cloth with a steel needle laid across it and a vermilion thread through its eye, stitched into the cloth." width="132" align="left">
 
 Spawn AIIs on demand, and search every Thread as one.
 
 Weave is a macOS app in the Rao Studios line. It spawns AIIs, each a full Ambient Intelligence Index home with its own Thread on its own ports. Each one takes deposits directly, embeds them on device with voyage-4-nano, and extracts their graph on device with Granite 4.0 H-Micro. The models already downloaded in `~/.rao` are shared, so a spawned AII downloads nothing.
 
 Choose one AII as the host: the main AII in `~/.rao`, or one Weave spawned. Every woven Thread registers with the host's Sewn, and one query to the host fans out to all of them and merges their partitions by score. That is federated retrieval across data partitions, in its plainest form. Weave also opens a port of its own, so any local process can ask that question too.
+
+<br clear="left">
+
+<p align="center"><img src="Docs/README_Assets/fabric.png" alt="Weave's Fabric page with three spawned AIIs, alpha, beta and gamma, each up on its own ports with its embedder ready, its documents, groups, entities and relations counted, and woven into the main AII, which hosts and sees all three as nodes." width="760"></p>
+
+<p align="center"><em>Three AIIs spawned and managed: each on its own port slot, each woven into the host.</em></p>
 
 ## How it fits the Ambient Intelligence Index
 
@@ -53,32 +61,74 @@ swift test                        # Ops, seeding on scratch AII homes, the port,
 - **The host.** Choose it on the Fabric page. Weave brings the host's Sewn up and moves every running woven Thread onto it. The main AII is held with a lease, as every Rao app holds it.
 - **Explore.** Any Thread, in Weave's lane: its counts and models, its library, its graph, a search of it alone, a deposit into it, and its log.
 - **Search.** One query to the host. Each merged hit is named by the AII whose Thread answered it.
+- **Connect.** The requests another app makes to file into an AII and search it, in curl, Swift or JavaScript, with Copy and Run. An AII card's "…" menu opens it on that AII.
 - **Quit.** Weave's port closes and its lease goes. Spawned Threads keep running and are adopted at the next launch, unless Settings say to stop them.
 
-## Weave's port
+## In the window
+
+<p align="center"><img src="Docs/README_Assets/search.png" alt="The Search page: one question about the Jacquard loom's punched cards, answered by the host with partitions from all three AIIs, each hit labelled alpha, beta or gamma." width="760"></p>
+
+<p align="center"><em>One question to the host. The answers come from all three Threads, each labelled with the AII that held it.</em></p>
+
+<p align="center"><img src="Docs/README_Assets/explorer.png" alt="The Explorer on alpha: its documents, groups, entities and relationships, its embedder and extractor, and the entities its on-device graph extraction found most often." width="760"></p>
+
+<p align="center"><em>One Thread explored: what alpha holds, and the graph it extracted on device as the notes came in.</em></p>
+
+The README's screenshots are rebuilt by `scripts/art/readme-shots.sh`, which seeds a demo fabric (`Weave --demo seed`), captures each page, and removes it. `Weave --e2e <folder>` runs the Connect page's curl, Swift and JavaScript examples against a real fabric as another app would.
+
+## Connect another app
+
+Weave's port, `127.0.0.1:47600`, is how another app files records into an AII and reads them back. Weave fills in what the AII asks for, its secret, Weave's owner and the group, so the other app only names the AII. **Connect** in the sidebar shows every request below in curl, Swift or JavaScript, ready to copy. It also has a whole client to paste in as your network service, and a **Run** button that sends the request so you see its answer first.
+
+<p align="center"><img src="Docs/README_Assets/connect.png" alt="The Connect page: Weave's port and its key, an AII picker set to alpha, a language switch on curl, and request cards to list the AIIs, file a record, search one AII, search every AII and list records, each with Copy and Run." width="760"></p>
+
+**1. See the AIIs you can file into.** Each entry's `id` is what an insert names; `main` is the main AII.
 
 ```sh
-curl -s 127.0.0.1:47600/health
+curl -s http://127.0.0.1:47600/v1/threads \
+  -H "X-Ambient-Secret: $(cat ~/.rao/secrets/weave)"
+```
 
-curl -s 127.0.0.1:47600/v1/threads -H "X-Ambient-Secret: $(cat ~/.rao/secrets/weave)"
+```json
+{"threads": [{"id": "alpha", "label": "alpha", "status": "up", "accepting": true, "http_port": 47611, …},
+             {"id": "main", "label": "main AII", "status": "up", "accepting": true, …}],
+ "owner_id": "local-weave", "insert": "POST /v1/records {\"thread\": id, \"text\": …}", …}
+```
 
-curl -s -X POST 127.0.0.1:47600/v1/search \
+**2. File a record into one.** Weave answers once the record is searchable (`"indexed": true`), so a search right after finds it. Send `records: [{text, name}]` to file several; `group` is optional.
+
+```sh
+curl -s -X POST http://127.0.0.1:47600/v1/records \
   -H "X-Ambient-Secret: $(cat ~/.rao/secrets/weave)" \
   -H 'Content-Type: application/json' \
-  -d '{"query": "who reads punched cards?", "top_k": 10}'
+  -d '{"thread": "alpha", "text": "The Jacquard loom reads a chain of punched cards.", "name": "loom-note", "group": "Notes"}'
 ```
 
-The port binds 127.0.0.1 and refuses a request whose Host is not this Mac. `/v1/*` wants Weave's secret unless Settings turn that off.
+```json
+{"thread": "alpha", "filed": 1, "indexed": true, "documents": 4, "owner_id": "local-weave",
+ "group": {"id": "weave-alpha-notes", "label": "Notes"}}
+```
 
-A deposit goes straight to a spawned Thread, with that home's own `weave` secret:
+**3. Search it.** Name one AII with `thread`, or leave it out and the host searches every woven AII, merging by score. Each hit says which AII held it.
 
 ```sh
-curl -s -X POST 127.0.0.1:47611/v1/batch/embeddings \
-  -H "X-Ambient-Secret: $(cat ~/Library/Application\ Support/Weave/AIIs/alpha/secrets/weave)" \
+curl -s -X POST http://127.0.0.1:47600/v1/search \
+  -H "X-Ambient-Secret: $(cat ~/.rao/secrets/weave)" \
   -H 'Content-Type: application/json' \
-  -d '{"inputs": ["The Jacquard loom reads punched cards."], "sanitize": true,
-       "thread": {"owner_id": "local-weave", "group": {"id": "weave-alpha", "label": "Weave · alpha", "owner_id": "local-weave"}}}'
+  -d '{"query": "punched cards", "thread": "alpha", "top_k": 5}'
 ```
+
+**4. List an AII's records.** `GET /v1/threads/alpha/records` returns its groups and documents. `POST /v1/threads/alpha/records` and `POST /v1/threads/alpha/search` work too, with the AII in the path.
+
+| Answer | Means |
+| --- | --- |
+| 400 | No `thread`, or nothing to file or search |
+| 401 | Missing or wrong `X-Ambient-Secret` |
+| 404 | No AII with that id: `GET /v1/threads` lists them |
+| 502 | The AII's Thread is stopped: start it in Weave |
+| 503 | No host is up, for a search across every AII |
+
+**The key.** The examples read Weave's key from `~/.rao/secrets/weave`. A sandboxed app can't read that file: turn off *Require Weave's secret* in Settings, or hand the key to the app. The port binds 127.0.0.1 and refuses any request whose Host isn't this Mac. `GET /health` is always open.
 
 ## Layout
 
@@ -96,6 +146,7 @@ Weave is built on [Granite](https://github.com/riteshpakala/Granite). Each subsy
 | `SearchService` | The federated query, each hit named by instance |
 | `PortService` | Weave's own port on 127.0.0.1 |
 | `ExplorerService` | One Thread's stats, library, graph, search, deposits and log |
+| `ConnectService` | The Connect page's examples: the AII and language they use, and each one run against Weave's port |
 | `SettingsService`, `ShellService` | The app's preferences (`weave.settings.0002`) and its window |
 
 The relays point down only: Search → Host → Fabric, Port → Host and Fabric, Explorer → Fabric.
@@ -107,6 +158,7 @@ The relays point down only: Search → Host → Fabric, Port → Host and Fabric
 | `scripts/dev/dev.sh` | Build, stable-sign and run |
 | `scripts/build/make-app.sh [--install]` | Assemble, stamp and sign `build/Weave.app` |
 | `scripts/art/gen-app-icon.swift` | Render the app icon (knitted cloth, a needle, a vermilion thread) from its SVG |
+| `scripts/art/readme-shots.sh` | Rebuild the README's screenshots from a demo fabric |
 | `Docs/README_Assets/src/build.sh` | Rebuild this README's hero |
 
 GNU General Public License v3.0 (see [LICENSE](LICENSE)).
