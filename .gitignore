@@ -60,3 +60,13 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+## Weave
+build/
+.build/
+.swiftpm/configuration/
+.vscode/
+.claude/
+__pycache__/
+*.env
+Support/*.provisionprofile

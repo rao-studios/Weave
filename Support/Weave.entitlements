@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- No sandbox: Weave spawns AIIServer, writes AII homes under a folder the person picks, and opens
+     a loopback port. As Veil's and Craft's. -->
+<plist version="1.0">
+<dict/>
+</plist>
