@@ -32,7 +32,7 @@ extension Settings {
                     KeyValueRow(key: "On disk", value: f.diskBytes.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "measuring…",
                                 mono: false)
                     KeyValueRow(key: "In ~/.rao", value: "Weave's secret and lane only, as every Rao app has", mono: false)
-                    Note("Every AII Weave spawns is a full AII home, kept in Weave's own folder apart from ~/.rao. Turn on Custom location to keep them elsewhere, such as an external drive: the folder is remembered while the toggle is off, and it must be on an APFS or Mac OS Extended volume. Its models are a link to ~/.rao's, so nothing downloads twice and removing an AII never touches them.")
+                    Note("Every AII Weave spawns is a full AII home, kept in Weave's own folder apart from ~/.rao. Turn on Custom location to keep them elsewhere, such as an external drive; the folder is remembered while the toggle is off. On a drive that cannot hold keys (ExFAT), each AII's data goes there and its secrets and keys stay in Weave's folder on this Mac. Its models are a link to ~/.rao's, so nothing downloads twice and removing an AII never touches them.")
                     if let legacy = f.legacyNote { Note(legacy).foregroundStyle(Color.weaveAmber) }
                     HStack(spacing: 8) {
                         Button("Reveal in Finder") { WeaveAppRoot.shared.revealRoot() }.buttonStyle(WeaveButtonStyle())

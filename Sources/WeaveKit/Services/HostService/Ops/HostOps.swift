@@ -48,7 +48,7 @@ public enum HostOps {
                               threadPorts: config.threadPorts)
         case .spawned(let name):
             guard let record = fabric.record(name) else { throw FabricError.notFound(name) }
-            return HostTarget(selection: selection, homeRoot: record.home, sewnPorts: record.sewnPorts, threadPorts: record.threadPorts)
+            return HostTarget(selection: selection, homeRoot: record.aiiHome.root.path, sewnPorts: record.sewnPorts, threadPorts: record.threadPorts)
         }
     }
 

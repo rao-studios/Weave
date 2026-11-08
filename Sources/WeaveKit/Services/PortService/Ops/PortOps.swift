@@ -52,7 +52,7 @@ public enum PortOps {
                 WeaveThreadEntry.Node(threadId: $0.threadId, isActive: $0.isActive, acceptingStorage: $0.acceptingStorage)
             }
             let status = snapshot.fabric.status(of: record.name)
-            return WeaveThreadEntry(id: record.name, label: record.name, home: record.home, httpPort: record.threadHTTP,
+            return WeaveThreadEntry(id: record.name, label: record.name, home: record.aiiHome.root.path, httpPort: record.threadHTTP,
                                     grpcPort: record.threadGRPC, status: status.label, woven: record.woven,
                                     embedder: snapshot.fabric.embedder[record.name]?.phase.rawValue,
                                     documents: snapshot.fabric.counts[record.name]?.documents, node: node, accepting: status.isUp)

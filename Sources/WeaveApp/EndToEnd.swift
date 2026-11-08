@@ -27,7 +27,7 @@ enum EndToEnd {
     @MainActor
     static func run(arguments: [String]) async -> Int32 {
         guard let index = arguments.firstIndex(of: "--e2e"), arguments.count > index + 1 else {
-            print("usage: Weave --e2e <scratch folder on APFS>"); return 2
+            print("usage: Weave --e2e <scratch folder>"); return 2
         }
         let root = URL(fileURLWithPath: arguments[index + 1], isDirectory: true).appendingPathComponent("fabric-\(UUID().uuidString.prefix(6))")
         var failures = 0

@@ -53,28 +53,39 @@ public enum FabricRoot {
         return link(a.path, b.path) == 0
     }
 
-    /// The volume's format, as Finder names it ("APFS", "ExFAT").
-    public static func volumeFormat(_ url: URL) -> String? {
-        try? url.resourceValues(forKeys: [.volumeLocalizedFormatDescriptionKey]).volumeLocalizedFormatDescription
+    /// Where the AII homes of a fabric on a volume without hard links are kept: in Weave's own
+    /// folder on this Mac, one per AII (see `ThreadRecord.aiiHomePath`).
+    public static var keptHomes: URL { WeaveIdentity.supportDirectory.appendingPathComponent("Homes", isDirectory: true) }
+
+    /// Whether `path` is a home Weave keeps apart (and so may delete with its record).
+    public static func isKeptHome(_ path: String, in kept: URL = keptHomes) -> Bool {
+        URL(fileURLWithPath: path).standardizedFileURL.path.hasPrefix(kept.standardizedFileURL.path + "/")
     }
 
-    /// Throws unless `root` can hold AII homes. With `mustExist` (a custom location, maybe on a
-    /// drive that is not connected), a missing folder is refused rather than made.
+    /// Throws unless Weave can keep AIIs in `root`. With `mustExist` (a custom location, maybe
+    /// on a drive that is not connected), a missing folder is refused rather than made.
     public static func usable(_ root: URL, mustExist: Bool = false) throws {
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: root.path, isDirectory: &isDirectory) else {
             if mustExist { throw FabricError.unavailable(root.path) }
             return
         }
-        guard isDirectory.boolValue, supportsHardLinks(root) else { throw FabricError.noHardLinks(root.path, format: volumeFormat(root)) }
+        guard isDirectory.boolValue, FileManager.default.isWritableFile(atPath: root.path) else { throw FabricError.notWritable(root.path) }
+    }
+
+    /// Removes one record's folder (only when it holds that record) and its kept home.
+    public static func remove(_ record: ThreadRecord, kept: URL = keptHomes) throws {
+        let folder = URL(fileURLWithPath: record.home, isDirectory: true)
+        if ThreadRecord.load(home: folder)?.name == record.name { try FileManager.default.removeItem(at: folder) }
+        if let home = record.aiiHomePath, isKeptHome(home, in: kept) { try? FileManager.default.removeItem(atPath: home) }
     }
 
     /// Removes what Weave made in `root` and nothing else: every AII home (a folder with a
     /// `weave.json`), `fabric.json` and the models link, then the folder itself only if that left
     /// it empty. A custom location may be a folder that holds other things.
-    public static func removeFabric(root: URL) {
+    public static func removeFabric(root: URL, kept: URL = keptHomes) {
         let fm = FileManager.default
-        for record in records(root: root) { try? fm.removeItem(atPath: record.home) }
+        for record in records(root: root) { try? remove(record, kept: kept) }
         try? fm.removeItem(at: root.appendingPathComponent(FabricFile.fileName))
         let models = root.appendingPathComponent("models", isDirectory: true)
         try? fm.removeItem(at: sharedModels(root: root))

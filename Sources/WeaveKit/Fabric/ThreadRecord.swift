@@ -28,8 +28,14 @@ public struct ThreadRecord: Codable, Sendable, Equatable, Identifiable, Hashable
     public var graphBackend: String
     /// Registered with the host's Sewn when running.
     public var woven: Bool
+    /// The AII home, when `home` cannot hold one. A volume without hard links (an ExFAT drive)
+    /// cannot take an AII's secrets and device key, so its home (secrets, keys, config, logs)
+    /// stays in Weave's folder on this Mac and `home` holds this file and the data the AII
+    /// writes: `thread/` and, as a host, `sewn/`. Nil: `home` is the AII home.
+    public var aiiHomePath: String?
 
-    public init(name: String, home: String, createdAt: Date, slot: PortSlot, graphBackend: String, woven: Bool) {
+    public init(name: String, home: String, createdAt: Date, slot: PortSlot, graphBackend: String, woven: Bool,
+                aiiHomePath: String? = nil) {
         self.format = Self.format
         self.name = name
         self.home = home
@@ -40,13 +46,22 @@ public struct ThreadRecord: Codable, Sendable, Equatable, Identifiable, Hashable
         self.sewnGRPC = slot.sewnGRPC
         self.graphBackend = graphBackend
         self.woven = woven
+        self.aiiHomePath = aiiHomePath
     }
 
     public var id: String { name }
     public var threadPorts: AIIPorts { AIIPorts(http: threadHTTP, grpc: threadGRPC) }
     public var sewnPorts: AIIPorts { AIIPorts(http: sewnHTTP, grpc: sewnGRPC) }
     public var ports: [Int] { [threadHTTP, threadGRPC, sewnHTTP, sewnGRPC] }
-    public var aiiHome: AIIHome { AIIHome(root: URL(fileURLWithPath: home, isDirectory: true)) }
+    public var aiiHome: AIIHome { AIIHome(root: URL(fileURLWithPath: aiiHomePath ?? home, isDirectory: true)) }
+    /// The fabric folder this record lives in.
+    public var fabricRoot: URL { URL(fileURLWithPath: home, isDirectory: true).deletingLastPathComponent() }
+    /// Where the AII writes its data when its home is kept apart; nil when the home holds it.
+    public var dataDirectories: (thread: URL, sewn: URL)? {
+        guard aiiHomePath != nil else { return nil }
+        let folder = URL(fileURLWithPath: home, isDirectory: true)
+        return (folder.appendingPathComponent("thread", isDirectory: true), folder.appendingPathComponent("sewn", isDirectory: true))
+    }
 
     /// A lowercase handle, the same rule as an AII app name: `^[a-z][a-z0-9]{1,31}$`.
     public static func isValidName(_ name: String) -> Bool { AIIApp.isValidName(name) }

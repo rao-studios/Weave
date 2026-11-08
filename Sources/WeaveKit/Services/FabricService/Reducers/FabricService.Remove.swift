@@ -34,13 +34,10 @@ extension FabricService {
             return FabricService.work(ticket: meta.ticket, name: meta.name, state: state) { fabric in
                 try await FabricService.lane.run {
                     await FabricOps.stop(record)
-                    // Only a folder holding this record's weave.json is removed.
-                    let home = URL(fileURLWithPath: record.home, isDirectory: true)
-                    if ThreadRecord.load(home: home)?.name == record.name {
-                        try FileManager.default.removeItem(at: home)
-                    }
+                    // Only a folder holding this record's weave.json is removed, with its kept home.
+                    try FabricRoot.remove(record)
                     fabric.set(.removed(record.name))
-                    await FabricOps.measure(fabric, root: home.deletingLastPathComponent().path)
+                    await FabricOps.measure(fabric, root: record.fabricRoot.path)
                     return .done
                 }
             }

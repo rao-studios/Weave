@@ -146,8 +146,11 @@ public enum FabricOps {
 
     // MARK: - Spawn
 
+    /// A new AII in the fabric. On a volume that cannot hard-link (an ExFAT drive), its folder
+    /// there holds the record and the data, and its home is kept in `kept` on this Mac.
     public static func spawn(name: String, graphBackend: String, woven: Bool, softCap: Int, state: State,
-                             main: AIIHome = .resolved(), listening: (Int) -> Bool = WeavePortPlan.isListening) throws -> ThreadRecord {
+                             main: AIIHome = .resolved(), listening: (Int) -> Bool = WeavePortPlan.isListening,
+                             kept: URL = FabricRoot.keptHomes, hardLinks: (URL) -> Bool = FabricRoot.supportsHardLinks) throws -> ThreadRecord {
         guard ThreadRecord.isValidName(name), name != ThreadGateway.mainName else { throw FabricError.invalidName(name) }
         guard state.record(name) == nil else { throw FabricError.exists(name) }
         guard state.threads.count < max(1, softCap) else { throw FabricError.softCap(softCap) }
@@ -157,11 +160,21 @@ public enum FabricOps {
         guard let slot = WeavePortPlan.freeSlot(taken: state.takenPorts, listening: listening) else { throw FabricError.noFreeSlot }
         guard let fabric = try main.readSecret(for: WeaveIdentity.app) else { throw FabricError.noWeaveSecret }
 
-        let home = AIIHome(root: homeURL)
+        let apart = !hardLinks(root)
+        let home: AIIHome
+        if apart {
+            try PrivateFile.ensureDirectory(homeURL)
+            try FileManager.default.createDirectory(at: kept, withIntermediateDirectories: true)
+            try PrivateFile.ensureDirectory(kept)
+            home = AIIHome(root: kept.appendingPathComponent("\(name)-\(UUID().uuidString.prefix(8).lowercased())", isDirectory: true))
+        } else {
+            home = AIIHome(root: homeURL)
+        }
         try FabricSeeding.provision(home: home, main: main, fabric: fabric)
         try FabricSeeding.shareModels(home: home, root: root)
-        let record = ThreadRecord(name: name, home: home.root.path, createdAt: Date(), slot: slot,
-                                  graphBackend: graphBackend == "keyword" ? "keyword" : "mlx", woven: woven)
+        let record = ThreadRecord(name: name, home: homeURL.path, createdAt: Date(), slot: slot,
+                                  graphBackend: graphBackend == "keyword" ? "keyword" : "mlx", woven: woven,
+                                  aiiHomePath: apart ? home.root.path : nil)
         try ThreadLauncher.config(for: record).write(home: home)
         try record.write()
         return record
@@ -177,7 +190,7 @@ public enum FabricOps {
         guard FileManager.default.isExecutableFile(atPath: binary.path) else { throw FabricError.noServer(binary.path) }
         let home = record.aiiHome
         if reseed, let fabric = try main.readSecret(for: WeaveIdentity.app) { try FabricSeeding.reseed(home: home, fabric: fabric) }
-        try FabricSeeding.shareModels(home: home, root: home.root.deletingLastPathComponent())
+        try FabricSeeding.shareModels(home: home, root: record.fabricRoot)
         let spec = ThreadLauncher.threadSpec(record, mothership: mothership, executable: binary)
         let server = try ThreadLauncher.server(spec, home: home)
         let handle = try await server.ensureRunning(timeout: 120)

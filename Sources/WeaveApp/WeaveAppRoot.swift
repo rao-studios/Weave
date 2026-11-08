@@ -260,7 +260,7 @@ final class WeaveAppRoot {
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
         panel.prompt = "Use Folder"
-        panel.message = "Where Weave keeps the AIIs it spawns. It must be on an APFS or Mac OS Extended volume."
+        panel.message = "Where Weave keeps the AIIs it spawns. An external drive works."
         panel.directoryURL = s.customLocation.isEmpty ? URL(fileURLWithPath: "/Volumes", isDirectory: true)
                                                       : FabricRoot.url(s.customLocation).deletingLastPathComponent()
         guard panel.runModal() == .OK, let url = panel.url else { return }

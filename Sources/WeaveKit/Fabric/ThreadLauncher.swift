@@ -40,9 +40,12 @@ public enum ThreadLauncher {
         return ManagedServer(spec: spec, secret: secret, launcherApp: WeaveIdentity.app, policy: nil)
     }
 
-    /// The config a spawned home is written with: its slot's ports and its graph backend.
+    /// The config a spawned home is written with: its slot's ports, its graph backend, and, when
+    /// the home is kept apart from the record, data folders beside the record.
     public static func config(for record: ThreadRecord) -> AIIConfig {
-        AIIConfig(sewn: .init(httpPort: record.sewnHTTP, grpcPort: record.sewnGRPC),
-                  thread: .init(httpPort: record.threadHTTP, grpcPort: record.threadGRPC, graphBackend: record.graphBackend))
+        let data = record.dataDirectories
+        return AIIConfig(sewn: .init(httpPort: record.sewnHTTP, grpcPort: record.sewnGRPC, dataDir: data?.sewn.path),
+                         thread: .init(httpPort: record.threadHTTP, grpcPort: record.threadGRPC, dataDir: data?.thread.path,
+                                       graphBackend: record.graphBackend))
     }
 }

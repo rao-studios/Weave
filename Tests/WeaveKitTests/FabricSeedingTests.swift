@@ -147,8 +147,33 @@ import WeaveKitTestSupport
         try FabricRoot.usable(missing)
         try FileManager.default.createDirectory(at: missing, withIntermediateDirectories: true)
         try FabricRoot.usable(missing, mustExist: true)
-        let exfat = FabricError.noHardLinks("/Volumes/T9/rao/weave", format: "ExFAT").errorDescription ?? ""
-        #expect(exfat.contains("is on an ExFAT volume") && exfat.contains("APFS"))
+    }
+
+    @Test func onAVolumeWithoutHardLinksTheDataGoesThereAndTheHomeStaysOnThisMac() throws {
+        let scratch = Scratch(); defer { scratch.clean() }
+        let kept = scratch.url.appendingPathComponent("Homes", isDirectory: true)
+        try FabricSeeding.prepareMain(scratch.main)
+        try FabricRoot.ensure(root: scratch.root, main: scratch.main)
+        var state = FabricService.Center.State()
+        state.root = scratch.root.path
+        let record = try FabricOps.spawn(name: "alpha", graphBackend: "mlx", woven: true, softCap: 8, state: state,
+                                         main: scratch.main, listening: { _ in false }, kept: kept, hardLinks: { _ in false })
+        let folder = scratch.root.appendingPathComponent("alpha", isDirectory: true)
+        #expect(record.home == folder.path && ThreadRecord.load(home: folder) == record)
+        let home = try #require(record.aiiHomePath)
+        #expect(FabricRoot.isKeptHome(home, in: kept) && record.aiiHome.root.path == home)
+        #expect(FileManager.default.fileExists(atPath: record.aiiHome.secretFile(for: WeaveIdentity.app).path))
+        #expect(!FileManager.default.fileExists(atPath: folder.appendingPathComponent("secrets").path), "no secret on the drive")
+        #expect(!FileManager.default.fileExists(atPath: folder.appendingPathComponent("keys").path), "no device key on the drive")
+        let config = AIIConfig.load(home: record.aiiHome)
+        #expect(config.threadDataDirectory(home: record.aiiHome).path == folder.appendingPathComponent("thread").path)
+        #expect(config.sewnDataDirectory(home: record.aiiHome).path == folder.appendingPathComponent("sewn").path)
+        let spec = ThreadLauncher.threadSpec(record, mothership: nil, executable: URL(fileURLWithPath: "/bin/true"), inherited: [:])
+        #expect(spec.arguments.joined(separator: " ").contains("--data-dir \(folder.appendingPathComponent("thread").path)"))
+        #expect(FabricRoot.records(root: scratch.root) == [record])
+
+        try FabricRoot.remove(record, kept: kept)
+        #expect(!FileManager.default.fileExists(atPath: folder.path) && !FileManager.default.fileExists(atPath: home))
     }
 
     @Test func removingAFabricFromAFolderLeavesWhatWeaveDidNotMake() throws {
