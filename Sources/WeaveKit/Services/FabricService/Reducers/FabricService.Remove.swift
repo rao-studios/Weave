@@ -40,6 +40,7 @@ extension FabricService {
                         try FileManager.default.removeItem(at: home)
                     }
                     fabric.set(.removed(record.name))
+                    await FabricOps.measure(fabric, root: home.deletingLastPathComponent().path)
                     return .done
                 }
             }

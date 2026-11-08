@@ -18,6 +18,7 @@ extension ShellService {
                 case toggleSidebar
                 case spawnSheet(Bool)
                 case pendingRemove(String?)
+                case pendingStorage(StorageAction?)
                 case select(ThreadRef?)
                 case error(AppError?)
             }

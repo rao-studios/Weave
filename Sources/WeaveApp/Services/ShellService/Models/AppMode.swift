@@ -5,6 +5,12 @@
 
 import Foundation
 
+/// A storage action waiting for its confirmation.
+enum StorageAction: Sendable, Equatable {
+    case removeAll
+    case uninstall
+}
+
 enum AppMode: String, CaseIterable, Sendable, Hashable {
     case fabric, explorer, search, settings
 

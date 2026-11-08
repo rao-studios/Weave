@@ -6,9 +6,10 @@ Craft's plates.py shoot), from HTML, through the installed Google Chrome driven 
 Inputs:  this folder's rr-mark.png; Playfair Display Italic from ~/Library/Fonts.
 Outputs: hero.png (1200x630 at 2x: 2400x1260) in argv[1].
 
-What it draws follows the app: a query enters Weave's port (127.0.0.1:47600), goes to the host
-(the Sewn every woven Thread registered with, ringed in Weave's vermilion), and fans out to the
-spawned AIIs' Threads, each on its own slot's port; their partitions come back merged by score.
+What it draws follows the app: a query enters Weave's port (127.0.0.1:47600) as a vermilion
+thread, passes through the eye of a needle, the host (the Sewn every woven Thread registered with,
+as the app icon's needle), and fans out to the spawned AIIs' Threads, each on its own slot's port;
+their partitions come back merged by score.
 """
 
 import math
@@ -79,19 +80,24 @@ def weave_marks(y, x0, x1, colour, step=26):
 
 def hero(browser):
     strands = "".join(
-        f'<path d="{strand(HOST_X + 14, LANE_Y, x - 11, y)}" fill="none" stroke="{colour}" stroke-width="3.4" stroke-linecap="round"/>'
+        f'<path d="{strand(HOST_X + 4, LANE_Y, x - 11, y)}" fill="none" stroke="{colour}" stroke-width="3.4" stroke-linecap="round"/>'
         f'<circle cx="{x}" cy="{y}" r="9.5" fill="none" stroke="{colour}" stroke-width="2.4"/>'
         f'<circle cx="{x}" cy="{y}" r="3.6" fill="{colour}"/>'
         for x, y, colour, _, _ in ENDS)
     labels = "".join(
         f'<div class="node" style="left:{x - 168}px; top:{y - 33}px"><b>{name}</b> <span>:{port}</span></div>'
         for x, y, _, name, port in ENDS)
-    query = (f'<line x1="{PORT_X + 8}" y1="{LANE_Y}" x2="{HOST_X - 14}" y2="{LANE_Y}" stroke="{LINE}" stroke-width="3" stroke-linecap="round"/>'
-             + weave_marks(LANE_Y, PORT_X + 8, HOST_X - 14, LINE)
-             + f'<path d="M{HOST_X - 26},{LANE_Y - 7} L{HOST_X - 18},{LANE_Y} L{HOST_X - 26},{LANE_Y + 7}" fill="none" stroke="{LINE}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+    query = (f'<line x1="{PORT_X + 8}" y1="{LANE_Y}" x2="{HOST_X}" y2="{LANE_Y}" stroke="{VERMILION}" stroke-width="3" '
+             f'stroke-linecap="round" stroke-dasharray="14 9"/>'
              + f'<rect x="{PORT_X - 6}" y="{LANE_Y - 8}" width="14" height="16" rx="3" fill="none" stroke="{LINE}" stroke-width="2.2"/>')
-    host = (f'<circle cx="{HOST_X}" cy="{LANE_Y}" r="14" fill="none" stroke="{VERMILION}" stroke-width="2.8"/>'
-            f'<circle cx="{HOST_X}" cy="{LANE_Y}" r="5" fill="{VERMILION}"/>')
+    # The host: the icon's steel needle, upright and leaning, the query's thread through its eye.
+    host = (f'<g transform="translate({HOST_X} {LANE_Y}) rotate(-58) scale(1.4)">'
+            '<path d="M-60 2.2L-48 3.6L9 3.8Q14 3.8 14 0.6Q14 -2.6 9 -2.6L-48 -2.2Z" fill="#000" fill-opacity=".35" transform="translate(2 3)"/>'
+            '<path d="M-60 0L-48 -2.6L9 -3.2Q14.5 -3.2 14.5 0Q14.5 3.2 9 3.2L-48 2.6Z" fill="url(#steel)"/>'
+            '<path d="M-46 -1.5L8 -1.9" stroke="#fff" stroke-opacity=".7" stroke-width=".9" stroke-linecap="round"/>'
+            '<rect x="-3.5" y="-1" width="9" height="2" rx="1" fill="#121211"/>'
+            '</g>'
+            f'<circle cx="{HOST_X}" cy="{LANE_Y}" r="3.4" fill="{VERMILION}"/>')
     page = f"""<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face {{ font-family: "Playfair"; font-style: italic; font-weight: 400 900; src: url("file://{PLAYFAIR}") format("truetype"), local("Playfair Display Italic"); }}
 html, body {{ margin: 0; width: 1200px; height: 630px; overflow: hidden; }}
@@ -113,19 +119,22 @@ svg {{ position: absolute; left: 0; top: 0; }}
 .legend {{ position: absolute; left: 66px; top: 556px; width: 1068px; display: flex; gap: 30px; align-items: baseline; font-size: 23px; color: #8b8a84; }}
 .legend b {{ font-weight: 400; color: #e9e7e0; }}
 .dot {{ display: inline-block; width: 13px; height: 13px; border-radius: 50%; margin-right: 10px; transform: translateY(-1px); }}
-.ring {{ display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 2.4px solid {VERMILION}; margin-right: 10px; transform: translateY(-1px); }}
+.needle {{ display: inline-block; width: 26px; height: 4px; border-radius: 2px 6px 6px 2px; margin-right: 10px; transform: translateY(-5px) rotate(-30deg);
+           background: linear-gradient(180deg, #f4f5f7, #c3c8cf 45%, #7f858e); }}
 .tag {{ margin-left: auto; }}
 </style></head><body>
 <img class="mark" src="rr-mark.png">
 <div class="caption">RAO STUDIOS · WEAVE · THREADS, WOVEN INTO ONE SEARCH</div>
 <div class="title">Weave</div>
 <div class="sub">spawn AIIs, and search every Thread as one</div>
-<svg width="1200" height="630">{query}{strands}{host}</svg>
+<svg width="1200" height="630"><defs><linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#f4f5f7"/><stop offset=".45" stop-color="#c3c8cf"/><stop offset="1" stop-color="#7f858e"/></linearGradient></defs>
+{query}{strands}{host}</svg>
 <div class="lab" style="left:{PORT_X - 2}px; top:{LANE_Y - 44}px"><b>your query</b> <span class="code">:47600</span></div>
-<div class="lab" style="left:{HOST_X - 40}px; top:{LANE_Y + 22}px"><b>the host</b></div>
+<div class="lab" style="left:{HOST_X + 22}px; top:{LANE_Y + 22}px"><b>the host</b></div>
 {labels}
 <div class="legend">
-  <span><i class="ring"></i><b>host</b> · a Sewn</span>
+  <span><i class="needle"></i><b>host</b> · a Sewn</span>
   <span><i class="dot" style="background:{BLUE}"></i><b>alpha</b></span>
   <span><i class="dot" style="background:{GREEN}"></i><b>beta</b></span>
   <span><i class="dot" style="background:{ORANGE}"></i><b>gamma</b> · Threads</span>

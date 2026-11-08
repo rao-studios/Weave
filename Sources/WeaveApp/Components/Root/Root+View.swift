@@ -60,6 +60,17 @@ extension Root {
         } message: { name in
             Text("This stops \(name)'s Thread and deletes its home: its index, its graph and its secrets. The shared models stay.")
         }
+        .alert(storageTitle, isPresented: storagePresented, presenting: shell.state.pendingStorage) { action in
+            Button(action == .uninstall ? "Remove Weave" : "Remove All", role: .destructive) {
+                shell.set(.pendingStorage(nil))
+                if action == .uninstall { WeaveAppRoot.shared.uninstall() } else { WeaveAppRoot.shared.removeAll() }
+            }
+            Button("Cancel", role: .cancel) { shell.set(.pendingStorage(nil)) }
+        } message: { action in
+            Text(action == .uninstall
+                 ? "This stops and deletes every AII Weave spawned, deletes Weave's folder, and takes Weave's secret and lane out of ~/.rao. The main AII and the shared models stay. Weave then quits; drag it to the Trash to finish."
+                 : "This stops and deletes every AII Weave spawned: their indexes, graphs and secrets. The shared models stay.")
+        }
         .sheet(isPresented: Binding(get: { shell.state.spawnSheet }, set: { shell.set(.spawnSheet($0)) })) {
             SpawnSheet(defaultBackend: settings.state.defaultGraphBackend, root: settings.state.rootFolder)
                 .onBubble {
@@ -74,6 +85,14 @@ extension Root {
 
     private var errorPresented: Binding<Bool> {
         Binding(get: { shell.state.error != nil }, set: { if !$0 { shell.set(.error(nil)) } })
+    }
+
+    private var storageTitle: String {
+        shell.state.pendingStorage == .uninstall ? "Remove Weave from this Mac?" : "Remove every spawned AII?"
+    }
+
+    private var storagePresented: Binding<Bool> {
+        Binding(get: { shell.state.pendingStorage != nil }, set: { if !$0 { shell.set(.pendingStorage(nil)) } })
     }
 
     private var removePresented: Binding<Bool> {

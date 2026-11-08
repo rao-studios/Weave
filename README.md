@@ -1,4 +1,4 @@
-[![Weave, by Rao Studios: spawn AIIs, and search every Thread as one. On a warm black plate, the title Weave in silver italic; beneath it a query leaves Weave's port, 47600, along a woven line to the host, a vermilion ring, and fans out into three coloured threads ending at three Threads, alpha on 47611, beta on 47621 and gamma on 47631. The legend reads: host, a Sewn; alpha, beta, gamma, Threads; one query, every partition, merged by score.](Docs/README_Assets/hero.png)](Docs/README_Assets/hero.png)
+[![Weave, by Rao Studios: spawn AIIs, and search every Thread as one. On a warm black plate, the title Weave in silver italic; beneath it a query leaves Weave's port, 47600, as a vermilion thread, passes through the eye of a steel needle, the host, and fans out into three coloured threads ending at three Threads, alpha on 47611, beta on 47621 and gamma on 47631. The legend reads: host, a Sewn; alpha, beta, gamma, Threads; one query, every partition, merged by score.](Docs/README_Assets/hero.png)](Docs/README_Assets/hero.png)
 
 # Weave
 
@@ -18,7 +18,9 @@ Choose one AII as the host: the main AII in `~/.rao`, or one Weave spawned. Ever
 | Spawned AII *n* | 47600 + 10*n* + 1 | + 2 | Its Thread |
 | Spawned AII *n*, as host | + 3 | + 4 | Its Sewn, started only while it hosts |
 
-Each spawned AII lives in its own folder under the fabric's folder, `~/.rao/weave` by default. Any folder on an APFS volume works. Weave runs the AII build installed at `~/.rao/aii/bin/AIIServer` and never builds one.
+Weave is a command center apart from `~/.rao`. Each spawned AII is a full AII home in Weave's own folder, `~/Library/Application Support/Weave/AIIs`, and its models are a link to `~/.rao`'s, so nothing downloads twice. Weave's footprint in `~/.rao` is what every Rao app has there: its secret and its lane. Any folder on an APFS volume can hold the AIIs instead. Weave runs the AII build installed at `~/.rao/aii/bin/AIIServer` and never builds one.
+
+**Storage.** Settings › Storage shows how much the AIIs hold on disk. *Remove All AIIs…* stops and deletes every one. *Remove Weave from This Mac…* also deletes Weave's folder and takes its secret and lane out of `~/.rao`, then quits; drag Weave to the Trash after. macOS keeps an app's folder in Application Support when the app alone goes to the Trash, so this is the step that frees the space.
 
 **The fabric.** Weave registers itself in the main AII as the `weave` app. A spawned home is seeded before AII provisions it: its stack secret is Weave's secret in `~/.rao`, and its device key is a copy of the main one, so its lane ids match the main AII's. When the main AII hosts, the main Sewn sees Weave's Threads as Weave's nodes. Ambient, Craft and Veil never search or file into those nodes. When a spawned AII hosts, every peer registers with it as that home's own stack.
 
@@ -46,7 +48,7 @@ swift test                        # Ops, seeding on scratch AII homes, the port,
 
 ## Using it
 
-- **Spawn.** ⌘N names an AII and picks how it reads a graph: on device, or keywords only. Weave finds a free port slot, provisions the home, links the models, and starts its Thread woven into the host.
+- **Spawn.** ⌘N names an AII and picks how it reads a graph: on device, or keywords only. Weave finds a free port slot, provisions the home in its own folder, links the models, and starts its Thread woven into the host.
 - **Weave in, weave out.** A woven Thread registers with the host. A loose one runs standalone and only takes direct deposits. Switching restarts the Thread, since a Thread reads its mothership at launch.
 - **The host.** Choose it on the Fabric page. Weave brings the host's Sewn up and moves every running woven Thread onto it. The main AII is held with a lease, as every Rao app holds it.
 - **Explore.** Any Thread, in Weave's lane: its counts and models, its library, its graph, a search of it alone, a deposit into it, and its log.
@@ -72,7 +74,7 @@ A deposit goes straight to a spawned Thread, with that home's own `weave` secret
 
 ```sh
 curl -s -X POST 127.0.0.1:47611/v1/batch/embeddings \
-  -H "X-Ambient-Secret: $(cat ~/.rao/weave/alpha/secrets/weave)" \
+  -H "X-Ambient-Secret: $(cat ~/Library/Application\ Support/Weave/AIIs/alpha/secrets/weave)" \
   -H 'Content-Type: application/json' \
   -d '{"inputs": ["The Jacquard loom reads punched cards."], "sanitize": true,
        "thread": {"owner_id": "local-weave", "group": {"id": "weave-alpha", "label": "Weave · alpha", "owner_id": "local-weave"}}}'
@@ -94,7 +96,7 @@ Weave is built on [Granite](https://github.com/riteshpakala/Granite). Each subsy
 | `SearchService` | The federated query, each hit named by instance |
 | `PortService` | Weave's own port on 127.0.0.1 |
 | `ExplorerService` | One Thread's stats, library, graph, search, deposits and log |
-| `SettingsService`, `ShellService` | The app's preferences (`weave.settings.0001`) and its window |
+| `SettingsService`, `ShellService` | The app's preferences (`weave.settings.0002`) and its window |
 
 The relays point down only: Search → Host → Fabric, Port → Host and Fabric, Explorer → Fabric.
 
@@ -104,7 +106,7 @@ The relays point down only: Search → Host → Fabric, Port → Host and Fabric
 | --- | --- |
 | `scripts/dev/dev.sh` | Build, stable-sign and run |
 | `scripts/build/make-app.sh [--install]` | Assemble, stamp and sign `build/Weave.app` |
-| `scripts/art/gen-app-icon.swift` | Render the app icon from its SVG |
+| `scripts/art/gen-app-icon.swift` | Render the app icon (knitted cloth, a needle, a vermilion thread) from its SVG |
 | `Docs/README_Assets/src/build.sh` | Rebuild this README's hero |
 
 GNU General Public License v3.0 (see [LICENSE](LICENSE)).

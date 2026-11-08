@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import WeaveKit
 
 enum SettingsOps {
     typealias State = SettingsService.Center.State
@@ -26,6 +27,6 @@ enum SettingsOps {
         state.softCap = min(max(state.softCap, 1), 39)
         state.searchTopK = min(max(state.searchTopK, 1), 50)
         if state.defaultGraphBackend != "keyword" { state.defaultGraphBackend = "mlx" }
-        if state.rootFolder.trimmingCharacters(in: .whitespaces).isEmpty { state.rootFolder = "~/.rao/weave" }
+        if state.rootFolder.trimmingCharacters(in: .whitespaces).isEmpty { state.rootFolder = FabricRoot.defaultPath }
     }
 }

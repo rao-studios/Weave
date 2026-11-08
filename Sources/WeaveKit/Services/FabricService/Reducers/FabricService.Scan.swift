@@ -33,6 +33,7 @@ extension FabricService {
                     let scan = try FabricOps.scan(root: meta.root)
                     fabric.set(.scanned(scan))
                     for record in scan.records { fabric.set(.probe(record.name, await FabricOps.probe(record))) }
+                    await FabricOps.measure(fabric, root: scan.root)
                     await MainQueue.flush()
                     await FabricService.tickets.resolve(meta.ticket, with: .scan(scan))
                 } catch {

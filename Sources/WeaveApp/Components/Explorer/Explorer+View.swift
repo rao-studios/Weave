@@ -27,11 +27,16 @@ extension Explorer {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
-                EmptyState(title: "Choose a Thread",
-                           message: "Pick the main AII or a spawned one above, or click one in the sidebar. Weave reads it with its own secret, so you see what Weave filed there and nothing of another app's.")
+                Card {
+                    EmptyState(title: "Choose a Thread",
+                               message: "Pick the main AII or a spawned one above, or click one in the sidebar. Weave reads it with its own secret, so you see what Weave filed there and nothing of another app's.")
+                }
+                .frame(maxWidth: 760, alignment: .leading)
+                Spacer(minLength: 0)
             }
         }
         .padding(WeaveMetrics.pagePadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onChange(of: state.tab) { _, tab in load(tab) }
     }
 

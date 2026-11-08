@@ -72,6 +72,7 @@ public struct FabricScan: Sendable, Equatable {
     public var reseed: Set<String>
     public var serverBinary: String
     public var serverInstalled: Bool
+    public var legacyNote: String?
 }
 
 extension FabricService {

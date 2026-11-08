@@ -32,6 +32,7 @@ enum SelfTest {
         let app = WeaveAppRoot.shared
         await app.awaitSettingsLoaded()
         let fabric = app.fabric, port = app.port
+        _ = try? AIIHome(root: home).provision()   // an installed AII, as `aii setup` leaves one
 
         do {
             let scan = try await fabric.scan(root: root.path)

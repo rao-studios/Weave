@@ -14,10 +14,12 @@ public struct Scratch: Sendable {
     public var main: AIIHome { AIIHome(root: url.appendingPathComponent("rao", isDirectory: true)) }
     public var root: URL { url.appendingPathComponent("fabric", isDirectory: true) }
 
-    public init(_ label: String = "weave-tests") {
+    /// `installed`: the main home is provisioned, as `aii setup` leaves one.
+    public init(_ label: String = "weave-tests", installed: Bool = true) {
         url = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("\(label)-\(UUID().uuidString.prefix(8))", isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        if installed { _ = try? main.provision() }
     }
 
     public func clean() { try? FileManager.default.removeItem(at: url) }

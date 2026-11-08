@@ -7,6 +7,7 @@
 //  passes through.
 //
 
+import AppKit
 import SwiftUI
 import WeaveKit
 
@@ -34,6 +35,8 @@ enum WeaveMetrics {
     static let controlHeight: CGFloat = 26
     static let pagePadding: CGFloat = 24
     static let readingWidth: CGFloat = 760
+    /// The label column every labelled row on a page shares, so values and controls line up.
+    static let labelColumn: CGFloat = 150
 }
 
 extension Font {
@@ -101,6 +104,7 @@ struct Pill: View {
             .background(tint.opacity(0.10))
             .foregroundStyle(tint)
             .clipShape(RoundedRectangle(cornerRadius: 4))
+            .fixedSize()
     }
 }
 
@@ -136,21 +140,23 @@ struct WeaveButtonStyle: ButtonStyle {
     }
 }
 
-/// The mark: three threads crossing, one knot ringed in the accent.
+/// The mark: the app icon's tile (knitted cloth, a needle, a vermilion thread), rendered by
+/// scripts/art/gen-app-icon.swift into Resources/AppIcon.png.
 struct WeaveMark: View {
     var size: CGFloat = 22
+
+    static let image: NSImage? = Bundle.module.url(forResource: "AppIcon", withExtension: "png").flatMap(NSImage.init(contentsOf:))
+
     var body: some View {
-        Canvas { context, canvas in
-            let s = canvas.width
-            let ink = GraphicsContext.Shading.color(.weaveThread)
-            for i in 0..<3 {
-                let t = s * (0.25 + 0.25 * CGFloat(i))
-                context.stroke(Path { $0.move(to: CGPoint(x: t, y: s * 0.08)); $0.addLine(to: CGPoint(x: t, y: s * 0.92)) }, with: ink, lineWidth: s * 0.07)
-                context.stroke(Path { $0.move(to: CGPoint(x: s * 0.08, y: t)); $0.addLine(to: CGPoint(x: s * 0.92, y: t)) }, with: ink, lineWidth: s * 0.07)
+        Group {
+            if let image = Self.image {
+                Image(nsImage: image).resizable().interpolation(.high).aspectRatio(contentMode: .fit)
+            } else {
+                Image(systemName: "scissors").resizable().aspectRatio(contentMode: .fit).foregroundStyle(Color.weaveAccent)
             }
-            let knot = CGRect(x: s * 0.75 - s * 0.13, y: s * 0.5 - s * 0.13, width: s * 0.26, height: s * 0.26)
-            context.stroke(Path(ellipseIn: knot), with: .color(.weaveAccent), lineWidth: s * 0.07)
         }
+        // The tile is drawn inset on a 1024 grid (824 of it): scale up so its edge meets the frame.
+        .frame(width: size * 1024 / 824, height: size * 1024 / 824)
         .frame(width: size, height: size)
     }
 }

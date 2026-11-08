@@ -25,6 +25,7 @@ struct HostChip: View {
             }
         }
         .padding(.horizontal, 6)
+        .fixedSize()
         .help(state.lastError ?? "The Sewn the woven Threads register with; its /v1/search fans out across them.")
     }
 }

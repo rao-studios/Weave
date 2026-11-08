@@ -16,7 +16,7 @@ import WeaveKitTestSupport
         state.status["gone"] = .up(pid: 1)
         state.counts["gone"] = ThreadCounts(documents: 1, groups: 1, entities: 0, relationships: 0)
         let scan = FabricScan(root: "/r", fingerprint: "abcd1234", records: [Fixtures.record("beta", slot: 2), Fixtures.record("alpha")],
-                              shapes: [:], reseed: ["beta"], serverBinary: "/bin/AIIServer", serverInstalled: true)
+                              shapes: [:], reseed: ["beta"], serverBinary: "/bin/AIIServer", serverInstalled: true, legacyNote: nil)
         FabricOps.apply(.scanned(scan), to: &state)
         #expect(state.threads.map(\.name) == ["alpha", "beta"])
         #expect(state.status["gone"] == nil && state.counts["gone"] == nil)

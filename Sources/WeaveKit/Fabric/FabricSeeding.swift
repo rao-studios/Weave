@@ -34,6 +34,7 @@ public enum FabricError: Error, Equatable, LocalizedError {
     case notFound(String)
     case busy(String)
     case noHost
+    case noMainAII(String)
 
     public var errorDescription: String? {
         switch self {
@@ -49,20 +50,34 @@ public enum FabricError: Error, Equatable, LocalizedError {
         case .notFound(let name): return "No AII named \(name)."
         case .busy(let name): return "\(name) is busy."
         case .noHost: return "No host is up."
+        case .noMainAII(let path): return "No AII at \(path). Install the AII (aii setup) or open a Rao app that ships one, then rescan."
         }
     }
 }
 
 public enum FabricSeeding {
     /// Registers Weave in the main home and answers its secret (the FABRIC secret). Idempotent.
+    /// Weave's whole footprint in ~/.rao is what every Rao app has there: `secrets/weave` and a
+    /// `weave` lane in `aii/lanes.json`. No folder: AII's `register` would make `apps/weave`, so
+    /// the secret and the lane are written directly. The main AII must already exist.
     @discardableResult
     public static func prepareMain(_ main: AIIHome = .resolved()) throws -> String {
+        guard main.layout() != nil else { throw FabricError.noMainAII(PrivateFile.path(main.root)) }
         _ = try AIIDeviceKey.loadOrCreate(home: main)
-        try main.provision(by: WeaveIdentity.app, displayName: WeaveIdentity.displayName,
-                           bundleIdentifier: WeaveIdentity.bundleIdentifier)
-        _ = try AIILanes.ensure(home: main, app: WeaveIdentity.app)
-        guard let secret = try main.readSecret(for: WeaveIdentity.app) else { throw FabricError.noWeaveSecret }
+        let secret = try main.ensureSecret(for: WeaveIdentity.app)
+        try AIILanes.register(home: main, app: WeaveIdentity.app, displayName: WeaveIdentity.displayName,
+                              bundleIdentifier: WeaveIdentity.bundleIdentifier, owner: nil, by: .app(WeaveIdentity.app))
         return secret
+    }
+
+    /// Takes Weave out of the main home: its secret and its lane. What Weave filed in the main
+    /// Thread stays there, unreachable until Weave registers again on the same device key.
+    public static func unregister(_ main: AIIHome = .resolved()) throws {
+        try AIILanes.remove(home: main, app: WeaveIdentity.app)
+        let secret = main.secretFile(for: WeaveIdentity.app)
+        if FileManager.default.fileExists(atPath: secret.path) { try FileManager.default.removeItem(at: secret) }
+        let apps = main.appDirectory(WeaveIdentity.app)
+        if (try? FileManager.default.contentsOfDirectory(atPath: apps.path))?.isEmpty == true { try? FileManager.default.removeItem(at: apps) }
     }
 
     /// The first eight hex of the secret's SHA-256: shown, never the secret.

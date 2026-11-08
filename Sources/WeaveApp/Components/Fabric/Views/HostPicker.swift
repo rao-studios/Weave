@@ -28,7 +28,7 @@ struct HostPicker: View {
                     ForEach(records) { record in Text(record.name).tag(HostSelection.spawned(record.name)) }
                 }
                 .labelsHidden()
-                .frame(width: 220)
+                .fixedSize()
                 .disabled(state.isSwitching)
                 StatusDot(state: state.isSwitching ? .warn : StatusDot.State(state.sewn))
                 if let target = state.target {
@@ -39,7 +39,7 @@ struct HostPicker: View {
                     Pill(text: phase)
                 }
             }
-            Text(caption).font(.weaveSans(11.5)).foregroundStyle(Color.weaveInk.opacity(0.6))
+            Note(caption)
             if !state.nodes.filter(\.isActive).isEmpty {
                 HStack(spacing: 6) {
                     Text("Nodes").font(.weaveSans(11)).foregroundStyle(Color.weaveInk.opacity(0.5))

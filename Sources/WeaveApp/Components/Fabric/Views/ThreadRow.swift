@@ -43,7 +43,7 @@ struct ThreadRow: View {
                 controls
             }
             HStack(spacing: 18) {
-                KeyValueRow(key: "Thread", value: "http \(record.threadHTTP) · grpc \(record.threadGRPC)").frame(maxWidth: 300)
+                KeyValueRow(key: "Thread", value: "http \(record.threadHTTP) · grpc \(record.threadGRPC)").frame(maxWidth: 360)
                 Text(status.label + (status.detail.map { " · \($0)" } ?? "")).font(.weaveMono(10.5)).foregroundStyle(Color.weaveInk.opacity(0.6))
                 Spacer()
             }

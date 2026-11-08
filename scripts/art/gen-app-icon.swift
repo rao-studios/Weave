@@ -1,14 +1,16 @@
 #!/usr/bin/env swift
-// WHAT: Render Weave's app icon: a plain weave of graphite threads on linen, each crossing over
-//       then under, and one crossing ringed in vermilion: the host, the knot every thread passes
-//       through. After Veil's scripts/art/gen-app-icon.swift.
+// WHAT: Render Weave's app icon: a knitted cloth (stockinette, rows of V stitches in graphite
+//       yarn) with a steel needle laid across it, a vermilion thread through its eye running
+//       down and stitched into the cloth. The thread is what Weave adds: one line through every
+//       piece. After Veil's scripts/art/gen-app-icon.swift.
 // OUT:  Support/AppIcon/icon_1024.png (the .icns fallback, via make-iconset.sh),
 //       Support/AppIcon/AppIcon.icon/Assets/icon_1024.png (the layer macOS 26+ draws), and
-//       Sources/WeaveApp/Resources/AppIcon.png (the Dock icon when Weave runs unbundled).
+//       Sources/WeaveApp/Resources/AppIcon.png (the Dock icon when Weave runs unbundled, and the
+//       app's own mark in the sidebar).
 // PIN:  The first two are square, opaque and unrounded, like Ambient's, Veil's and Craft's: the
 //       system masks them. The third is drawn on the macOS tile itself (824 of 1024, continuous
 //       corners r 185.4, a soft shadow), since nothing masks an icon set at runtime.
-// PIN:  AppIcon.icon draws the layer at scale 1: the weave runs edge to edge, as Veil's grid does.
+// PIN:  AppIcon.icon draws the layer at scale 1: the cloth runs edge to edge, as Veil's grid does.
 //
 //   swift scripts/art/gen-app-icon.swift
 //
@@ -24,39 +26,57 @@ let dockOutput = root.appendingPathComponent("Sources/WeaveApp/Resources/AppIcon
 let size = 1024
 let dockSize = 512
 
-// A 100-unit tile. Five warps (vertical) and five wefts (horizontal) at 18, 34, 50, 66, 82, drawn
-// whole; then at every crossing the thread on top is drawn again over a small linen gap that cuts
-// the one beneath, alternating warp and weft, so the cloth reads over, under, over.
-let lines: [Double] = [18, 34, 50, 66, 82]
+// A 100-unit tile. Stockinette in cream yarn: columns 12.5 apart, rows 8.6 apart; each stitch is
+// a V of two leaf-shaped legs, tilted 30 degrees, over the darker shadow of the knit between them.
 let linen = "#ece6d8"
-let warp = "#34373e"
-let weft = "#666a73"
+let gaps = "#9d937f"
+let yarn = "#ede6d6"
+let yarnEdge = "#b3a993"
+let yarnLight = "#fbf8f1"
 let accent = "#c4502f"
-let host = (x: 66.0, y: 34.0)
-let width = 5.2, gap = 2.0
+let accentDark = "#8f3519"
 
-var body = ""
-for y in lines { body += #"<path d="M-4 \#(y)H104" stroke="\#(weft)" stroke-width="\#(width)"/>"# }
-for x in lines { body += #"<path d="M\#(x) -4V104" stroke="\#(warp)" stroke-width="\#(width)"/>"# }
-for (i, x) in lines.enumerated() {
-    for (j, y) in lines.enumerated() {
-        let half = width / 2, cut = half + gap
-        if (i + j) % 2 == 0 {
-            // The warp lies on top: the weft is cut either side of it.
-            body += #"<rect x="\#(x - cut)" y="\#(y - half - 0.2)" width="\#(2 * cut)" height="\#(width + 0.4)" fill="url(#face)"/>"#
-            body += #"<path d="M\#(x) \#(y - cut - 1)V\#(y + cut + 1)" stroke="\#(warp)" stroke-width="\#(width)"/>"#
-        } else {
-            // The weft lies on top: the warp is cut above and below it.
-            body += #"<rect x="\#(x - half - 0.2)" y="\#(y - cut)" width="\#(width + 0.4)" height="\#(2 * cut)" fill="url(#face)"/>"#
-            body += #"<path d="M\#(x - cut - 1) \#(y)H\#(x + cut + 1)" stroke="\#(weft)" stroke-width="\#(width)"/>"#
+var cloth = #"<rect width="100" height="100" fill="\#(gaps)"/>"#
+for row in -1...12 {
+    let cy = 4.3 + 8.6 * Double(row)
+    for column in -1...8 {
+        let cx = 6.25 + 12.5 * Double(column)
+        for side in [-1.0, 1.0] {
+            let lx = cx + side * 2.95, tilt = side * 30
+            cloth += #"<g transform="translate(\#(lx) \#(cy)) rotate(\#(tilt))">"#
+            cloth += ##"<ellipse cx="0.35" cy="0.7" rx="3.05" ry="6.0" fill="#000" fill-opacity="0.16"/>"##
+            cloth += #"<ellipse rx="3.05" ry="6.0" fill="\#(yarn)" stroke="\#(yarnEdge)" stroke-width="0.45"/>"#
+            cloth += #"<ellipse cx="-0.7" cy="-1.4" rx="1.0" ry="3.3" fill="\#(yarnLight)" fill-opacity="0.9"/>"#
+            cloth += "</g>"
         }
     }
 }
-// The host: the crossing cleared to linen, ringed in vermilion, a knot at its heart.
-let ring = #"""
-  <circle cx="\#(host.x)" cy="\#(host.y)" r="10.6" fill="url(#face)"/>
-  <circle cx="\#(host.x)" cy="\#(host.y)" r="8.4" fill="none" stroke="\#(accent)" stroke-width="2.6"/>
-  <circle cx="\#(host.x)" cy="\#(host.y)" r="3.1" fill="\#(accent)"/>
+
+// The needle, laid along a diagonal: drawn on its own axis (tip at -50, eye near +40), then
+// rotated into place. A soft shadow, a steel body, a highlight, and the eye's slot.
+let needleCenter = (x: 50.0, y: 50.0), needleAngle = -42.0
+let needle = #"""
+  <g transform="translate(\#(needleCenter.x) \#(needleCenter.y)) rotate(\#(needleAngle))">
+    <path d="M-51 1.6L-38 3.7L44 3.9Q50.5 3.9 50.5 0.8Q50.5 -2.3 44 -2.3L-38 -1.9Z" fill="#000" fill-opacity="0.28" transform="translate(1.2 2.2)"/>
+    <path d="M-51 0L-38 -2.2L44 -2.6Q50.5 -2.6 50.5 0Q50.5 2.6 44 2.6L-38 2.2Z" fill="url(#steel)" stroke="#5f646c" stroke-width="0.35"/>
+    <path d="M-36 -1.3L44 -1.6" stroke="#ffffff" stroke-opacity="0.75" stroke-width="0.7" stroke-linecap="round"/>
+    <rect x="37.5" y="-0.75" width="9" height="1.5" rx="0.75" fill="#2b2d33"/>
+  </g>
+"""#
+// The eye in tile coordinates, for the thread.
+let radians = needleAngle * .pi / 180
+let eye = (x: needleCenter.x + 42 * cos(radians), y: needleCenter.y + 42 * sin(radians))
+
+// The thread: out of the eye, a loose loop to the right, then down into the cloth, where it runs
+// as a stitched line across a row (over a stitch, under the next).
+let tail = "M\(eye.x) \(eye.y)C\(eye.x + 14) \(eye.y + 2) \(eye.x + 12) \(eye.y + 26) \(eye.x - 4) \(eye.y + 34)S\(eye.x - 30) \(eye.y + 42) 48 77.7"
+let run = "M48 77.7H-2"
+let thread = #"""
+  <path d="\#(tail)" fill="none" stroke="#000" stroke-opacity="0.22" stroke-width="3.4" stroke-linecap="round" transform="translate(0.9 1.6)"/>
+  <path d="\#(tail)" fill="none" stroke="\#(accentDark)" stroke-width="2.9" stroke-linecap="round" transform="translate(0.4 0.6)"/>
+  <path d="\#(tail)" fill="none" stroke="\#(accent)" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="\#(run)" fill="none" stroke="\#(accentDark)" stroke-width="2.9" stroke-linecap="round" stroke-dasharray="6.5 6" transform="translate(0.3 0.5)"/>
+  <path d="\#(run)" fill="none" stroke="\#(accent)" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="6.5 6"/>
 """#
 
 let svg = """
@@ -67,10 +87,15 @@ let svg = """
       <stop offset="0.6" stop-color="\(linen)"/>
       <stop offset="1" stop-color="#d3cbba"/>
     </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f5f7"/>
+      <stop offset="0.45" stop-color="#c3c8cf"/>
+      <stop offset="1" stop-color="#7f858e"/>
+    </linearGradient>
   </defs>
-  <rect width="100" height="100" fill="url(#face)"/>
-  <g>\(body)</g>
-\(ring)
+  <g>\(cloth)</g>
+\(thread)
+\(needle)
 </svg>
 """
 

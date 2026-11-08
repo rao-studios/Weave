@@ -95,6 +95,13 @@ extension FabricService {
         onMain { service.center.watch.send(Watch.Meta(interval: interval)) }
     }
 
+    /// The fabric's size on disk, now.
+    public func measure() async {
+        let root = await MainActor.run { state.root }
+        guard !root.isEmpty else { return }
+        await FabricOps.measure(self, root: root)
+    }
+
     /// One probe of every Thread now.
     public func tick() async {
         await FabricOps.tick(self)

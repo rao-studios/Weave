@@ -18,7 +18,7 @@ struct ThreadPicker: View {
             ForEach(records) { Text($0.name).tag(ThreadRef.spawned($0.name)) }
         }
         .labelsHidden()
-        .frame(width: 200)
+        .fixedSize()
     }
 }
 

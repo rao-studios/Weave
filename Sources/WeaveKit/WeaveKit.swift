@@ -10,6 +10,7 @@
 //
 
 @_exported import AII
+import Foundation
 
 /// Who Weave is to the Ambient Intelligence Index.
 public enum WeaveIdentity {
@@ -22,4 +23,11 @@ public enum WeaveIdentity {
     public static let owner = "local-weave"
     /// Weave's own HTTP port.
     public static let defaultPort = 47600
+
+    /// Weave's own folder: `~/Library/Application Support/Weave`. Everything Weave makes lives
+    /// here (the spawned AIIs under `AIIs/`), never in ~/.rao, so removing Weave's data is one
+    /// folder (Settings › Storage › Remove Weave from this Mac).
+    public static var supportDirectory: URL {
+        AIIHome.userHomeDirectory.appendingPathComponent("Library/Application Support/Weave", isDirectory: true)
+    }
 }

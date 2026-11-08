@@ -90,4 +90,52 @@ import WeaveKitTestSupport
             try FabricOps.spawn(name: "beta", graphBackend: "mlx", woven: true, softCap: 1, state: state, main: scratch.main, listening: { _ in false })
         }
     }
+
+    @Test func weaveLeavesASecretAndALaneInTheMainHomeAndNoFolder() throws {
+        let scratch = Scratch(); defer { scratch.clean() }
+        try FabricSeeding.prepareMain(scratch.main)
+        #expect(try scratch.main.readSecret(for: WeaveIdentity.app) != nil)
+        #expect(scratch.main.lane(WeaveIdentity.app) != nil)
+        #expect(!FileManager.default.fileExists(atPath: scratch.main.appDirectory(WeaveIdentity.app).path))
+        #expect(!FileManager.default.fileExists(atPath: scratch.main.root.appendingPathComponent("weave").path))
+
+        try FabricSeeding.unregister(scratch.main)
+        #expect(try scratch.main.readSecret(for: WeaveIdentity.app) == nil)
+        #expect(scratch.main.lane(WeaveIdentity.app) == nil)
+    }
+
+    @Test func withoutAMainAIIWeaveRefusesToMakeOne() {
+        let scratch = Scratch(installed: false); defer { scratch.clean() }
+        #expect(throws: FabricError.noMainAII(PrivateFile.path(scratch.main.root))) { try FabricSeeding.prepareMain(scratch.main) }
+        #expect(!FileManager.default.fileExists(atPath: scratch.main.layoutFile.path))
+    }
+
+    @Test func anEmptyLegacyFabricInRaoIsSweptAndOneWithAIIsIsKept() throws {
+        let scratch = Scratch(); defer { scratch.clean() }
+        let fabric = try FabricSeeding.prepareMain(scratch.main)
+        let legacy = scratch.main.root.appendingPathComponent("weave", isDirectory: true)
+        try FabricRoot.ensure(root: legacy, main: scratch.main)
+        try FileManager.default.createDirectory(at: scratch.main.appDirectory(WeaveIdentity.app), withIntermediateDirectories: true)
+        #expect(FabricRoot.sweepLegacy(main: scratch.main) == nil)
+        #expect(!FileManager.default.fileExists(atPath: legacy.path))
+        #expect(!FileManager.default.fileExists(atPath: scratch.main.appDirectory(WeaveIdentity.app).path))
+
+        try FabricRoot.ensure(root: legacy, main: scratch.main)
+        let home = AIIHome(root: legacy.appendingPathComponent("old", isDirectory: true))
+        try FabricSeeding.provision(home: home, main: scratch.main, fabric: fabric)
+        try Fixtures.record("old", home: home.root.path).write()
+        #expect(FabricRoot.sweepLegacy(main: scratch.main)?.contains(legacy.path) == true)
+        #expect(FileManager.default.fileExists(atPath: legacy.path))
+    }
+
+    @Test func theDefaultFabricIsWeavesOwnFolderAndItsSizeSkipsTheModelsLink() throws {
+        #expect(FabricRoot.url(FabricRoot.defaultPath).path.hasPrefix(WeaveIdentity.supportDirectory.path))
+        #expect(!FabricRoot.defaultPath.contains(".rao"))
+        let scratch = Scratch(); defer { scratch.clean() }
+        try FileManager.default.createDirectory(at: scratch.main.huggingFaceHome, withIntermediateDirectories: true)
+        try Data(repeating: 1, count: 2_000_000).write(to: scratch.main.huggingFaceHome.appendingPathComponent("weights.bin"))
+        try FabricSeeding.prepareMain(scratch.main)
+        try FabricRoot.ensure(root: scratch.root, main: scratch.main)
+        #expect(FabricRoot.diskUsage(root: scratch.root) < 1_000_000, "the shared models are ~/.rao's, not the fabric's")
+    }
 }

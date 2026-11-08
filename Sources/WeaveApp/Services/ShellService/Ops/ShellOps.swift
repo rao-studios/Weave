@@ -15,6 +15,7 @@ enum ShellOps {
         case .toggleSidebar: state.sidebarVisible.toggle()
         case .spawnSheet(let on): state.spawnSheet = on
         case .pendingRemove(let name): state.pendingRemove = name
+        case .pendingStorage(let action): state.pendingStorage = action
         case .select(let ref):
             state.selectedThread = ref
             if ref != nil { state.mode = .explorer }

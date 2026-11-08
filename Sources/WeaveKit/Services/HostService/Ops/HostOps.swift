@@ -58,7 +58,9 @@ public enum HostOps {
         case .main:
             let supervisor = HostService.supervisors.get("main")
                 ?? AIISupervisor(app: WeaveIdentity.app, home: .resolved(), hold: .lease)
-            _ = try await supervisor.prepare(displayName: WeaveIdentity.displayName, bundleIdentifier: WeaveIdentity.bundleIdentifier)
+            // Not `prepare()`: it provisions the home and makes apps/weave. Weave is registered by
+            // FabricSeeding.prepareMain at every scan; the supervisor only holds the lease.
+            _ = try FabricSeeding.prepareMain()
             try await supervisor.ensureRunning(timeout: 90)
             HostService.supervisors.put("main", supervisor)
         case .spawned(let name):

@@ -14,6 +14,7 @@ extension ShellService {
             var sidebarVisible = true
             var spawnSheet = false
             var pendingRemove: String?
+            var pendingStorage: StorageAction?
             var selectedThread: ThreadRef?
             var error: AppError?
             init() {}

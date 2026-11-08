@@ -32,6 +32,7 @@ public enum FabricOps {
             state.embedder = state.embedder.filter { names.contains($0.key) }
             state.extractor = state.extractor.filter { names.contains($0.key) }
             state.counts = state.counts.filter { names.contains($0.key) }
+            state.legacyNote = scan.legacyNote
             state.lastError = nil
         case .record(let record):
             if let index = state.threads.firstIndex(where: { $0.name == record.name }) { state.threads[index] = record }
@@ -63,6 +64,9 @@ public enum FabricOps {
             state.interval = max(1, interval)
         case .ticked(let date):
             state.lastTick = date
+        case .disk(let bytes, let date):
+            state.diskBytes = bytes
+            state.measuredAt = date
         case .failed(let message):
             state.lastError = message
         case .clear:
@@ -79,6 +83,7 @@ public enum FabricOps {
 
     public static func scan(root path: String, main: AIIHome = .resolved()) throws -> FabricScan {
         let fabric = try FabricSeeding.prepareMain(main)
+        let legacyNote = FabricRoot.sweepLegacy(main: main)
         let root = FabricRoot.url(path)
         try FabricRoot.ensure(root: root, main: main)
         let records = FabricRoot.records(root: root)
@@ -91,7 +96,7 @@ public enum FabricOps {
         let binary = ThreadLauncher.serverBinary(main: main)
         return FabricScan(root: root.path, fingerprint: FabricSeeding.fingerprint(fabric), records: records, shapes: shapes,
                           reseed: reseed, serverBinary: binary.path,
-                          serverInstalled: FileManager.default.isExecutableFile(atPath: binary.path))
+                          serverInstalled: FileManager.default.isExecutableFile(atPath: binary.path), legacyNote: legacyNote)
     }
 
     // MARK: - Probe
@@ -127,6 +132,16 @@ public enum FabricOps {
             fabric.set(.probe(record.name, await probe(record)))
         }
         fabric.set(.ticked(Date()))
+        if !state.root.isEmpty, (state.measuredAt.map { Date().timeIntervalSince($0) > 60 } ?? true) {
+            await measure(fabric, root: state.root)
+        }
+    }
+
+    /// The fabric's size on disk, measured off main and written through `set`.
+    static func measure(_ fabric: FabricService, root: String) async {
+        let url = FabricRoot.url(root)
+        let bytes = await Task.detached(priority: .utility) { FabricRoot.diskUsage(root: url) }.value
+        fabric.set(.disk(bytes, Date()))
     }
 
     // MARK: - Spawn

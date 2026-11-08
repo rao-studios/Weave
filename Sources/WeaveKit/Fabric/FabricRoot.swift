@@ -2,9 +2,10 @@
 //  FabricRoot.swift
 //  WeaveKit
 //
-//  The folder the fabric lives in (default ~/.rao/weave): one AII home per spawned instance,
-//  `fabric.json` (the host Weave last chose), and `models/huggingface`, a link to the main AII's
-//  models folder so nothing is downloaded twice.
+//  The folder the fabric lives in (default ~/Library/Application Support/Weave/AIIs, inside Weave's
+//  own folder, apart from ~/.rao): one AII home per spawned instance, `fabric.json` (the host Weave
+//  last chose), and `models/huggingface`, a link to the main AII's models folder so nothing is
+//  downloaded twice. The link is only a link: removing the fabric never touches the models.
 //
 
 import Foundation
@@ -29,7 +30,9 @@ public struct FabricFile: Codable, Sendable, Equatable {
 }
 
 public enum FabricRoot {
-    public static let defaultPath = "~/.rao/weave"
+    public static let defaultPath = "~/Library/Application Support/Weave/AIIs"
+    /// Where Weave 0.0.0's first builds kept the fabric, inside ~/.rao.
+    public static let legacyPath = "~/.rao/weave"
 
     /// The root's URL, `~` expanded.
     public static func url(_ path: String) -> URL {
@@ -81,6 +84,34 @@ public enum FabricRoot {
 
     public static func save(_ file: FabricFile, root: URL) throws {
         try PrivateFile.writeAtomically(try AIIHome.encoder.encode(file), to: root.appendingPathComponent(FabricFile.fileName), mode: 0o600)
+    }
+
+    /// Removes what Weave's first builds left in ~/.rao: an empty `weave` fabric folder (its
+    /// fabric.json and models link only) and an empty `apps/weave`. A legacy folder still holding
+    /// AIIs is kept and named, never deleted.
+    @discardableResult
+    public static func sweepLegacy(main: AIIHome = .resolved()) -> String? {
+        let fm = FileManager.default
+        let legacy = main.root.appendingPathComponent("weave", isDirectory: true)
+        if fm.fileExists(atPath: legacy.path) {
+            if records(root: legacy).isEmpty { try? fm.removeItem(at: legacy) }
+            else { return "AIIs from an earlier Weave are still in \(legacy.path): choose that folder in Settings to manage them." }
+        }
+        let apps = main.appDirectory(WeaveIdentity.app)
+        if (try? fm.contentsOfDirectory(atPath: apps.path))?.isEmpty == true { try? fm.removeItem(at: apps) }
+        return nil
+    }
+
+    /// The bytes the fabric holds on disk. The models link is not followed: the models are ~/.rao's.
+    public static func diskUsage(root: URL) -> Int64 {
+        let keys: Swift.Set<URLResourceKey> = [.totalFileAllocatedSizeKey, .isRegularFileKey, .isSymbolicLinkKey]
+        guard let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: Array(keys)) else { return 0 }
+        var total: Int64 = 0
+        for case let url as URL in walker {
+            guard let values = try? url.resourceValues(forKeys: keys), values.isSymbolicLink != true, values.isRegularFile == true else { continue }
+            total += Int64(values.totalFileAllocatedSize ?? 0)
+        }
+        return total
     }
 
     /// Every instance under the root, by name.

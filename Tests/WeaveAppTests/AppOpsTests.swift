@@ -9,13 +9,13 @@ import WeaveKit
 
 @Suite struct SettingsOpsTests {
     @Test func theStoreKeyIsVersioned() {
-        #expect(SettingsService.persistenceKey.hasSuffix(".0001"))
+        #expect(SettingsService.persistenceKey.hasSuffix(".0002"))
         #expect(SettingsService.persistenceKey.hasPrefix("weave.settings"))
     }
 
     @Test func theDefaultsAreWeaves() {
         let state = SettingsService.Center.State()
-        #expect(state.rootFolder == "~/.rao/weave")
+        #expect(state.rootFolder == FabricRoot.defaultPath && !state.rootFolder.contains(".rao"))
         #expect(state.port == 47600 && state.requireSecretOnPort && state.portEnabled)
         #expect(!state.stopThreadsOnQuit && state.defaultGraphBackend == "mlx")
     }
@@ -26,7 +26,7 @@ import WeaveKit
             $0.port = 80; $0.healthInterval = 0; $0.softCap = 400; $0.defaultGraphBackend = "magic"; $0.rootFolder = "  "; $0.searchTopK = 0
         }, to: &state)
         #expect(state.port == 1024 && state.healthInterval == 1 && state.softCap == 39)
-        #expect(state.defaultGraphBackend == "mlx" && state.rootFolder == "~/.rao/weave" && state.searchTopK == 1)
+        #expect(state.defaultGraphBackend == "mlx" && state.rootFolder == FabricRoot.defaultPath && state.searchTopK == 1)
         SettingsOps.apply(.reset, to: &state)
         #expect(state.port == 47600)
     }

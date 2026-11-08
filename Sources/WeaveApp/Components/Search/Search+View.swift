@@ -58,6 +58,7 @@ extension Search {
             }
             .padding(WeaveMetrics.pagePadding)
             .frame(maxWidth: 900, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

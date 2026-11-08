@@ -40,8 +40,7 @@ extension Fabric {
                     if f.threads.isEmpty {
                         Card {
                             EmptyState(title: "No AIIs yet",
-                                       message: "Spawn one: Weave provisions an AII home in the folder, gives it its own ports, and starts its Thread with on-device embedding and graph extraction, sharing the models in ~/.rao.")
-                                .frame(height: 200)
+                                       message: "Spawn one: Weave provisions an AII home in its own folder, gives it its own ports, and starts its Thread with on-device embedding and graph extraction, sharing the models in ~/.rao.")
                         }
                     }
                     ForEach(f.threads) { record in
@@ -62,6 +61,7 @@ extension Fabric {
             }
             .padding(WeaveMetrics.pagePadding)
             .frame(maxWidth: 980, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

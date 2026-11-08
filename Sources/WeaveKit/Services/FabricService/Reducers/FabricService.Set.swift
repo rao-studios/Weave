@@ -26,6 +26,7 @@ extension FabricService {
                 case idle(String)
                 case loop(Bool, interval: Double)
                 case ticked(Date)
+                case disk(Int64, Date)
                 case failed(String?)
                 case clear
             }

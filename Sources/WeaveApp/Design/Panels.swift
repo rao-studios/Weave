@@ -42,25 +42,63 @@ struct KeyValueRow: View {
     var mono = true
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(key).font(.weaveSans(11)).foregroundStyle(Color.weaveInk.opacity(0.5)).frame(width: 120, alignment: .leading)
+            Text(key).font(.weaveSans(11)).foregroundStyle(Color.weaveInk.opacity(0.5)).frame(width: WeaveMetrics.labelColumn, alignment: .leading)
             Text(value).font(mono ? .weaveMono(11) : .weaveSans(12)).foregroundStyle(Color.weaveInk).textSelection(.enabled)
             Spacer(minLength: 0)
         }
     }
 }
 
+/// An empty state, set from the left like everything else on the page.
 struct EmptyState: View {
     let title: String
     let message: String
     var body: some View {
-        VStack(spacing: 8) {
-            WeaveMark(size: 34).opacity(0.7)
-            Text(title).font(.weaveSerif(17, italic: true)).foregroundStyle(Color.weaveInk.opacity(0.75))
-            Text(message).font(.weaveSans(12)).foregroundStyle(Color.weaveInk.opacity(0.5)).multilineTextAlignment(.center)
-                .frame(maxWidth: 420)
+        HStack(alignment: .top, spacing: 14) {
+            WeaveMark(size: 40)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title).font(.weaveSerif(17, italic: true)).foregroundStyle(Color.weaveInk.opacity(0.8))
+                Text(message).font(.weaveSans(12)).foregroundStyle(Color.weaveInk.opacity(0.55))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 460, alignment: .leading)
+            }
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(30)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .padding(.vertical, 6)
+    }
+}
+
+/// A label and its control, from the left edge: macOS centres a labelled Picker in its frame,
+/// so the label is drawn here and the control's own is hidden.
+struct LabeledRow<Control: View>: View {
+    let label: String
+    var width: CGFloat = WeaveMetrics.labelColumn
+    @ViewBuilder var control: Control
+
+    init(_ label: String, width: CGFloat = WeaveMetrics.labelColumn, @ViewBuilder control: () -> Control) {
+        self.label = label
+        self.width = width
+        self.control = control()
+    }
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(label).font(.weaveSans(12)).foregroundStyle(Color.weaveInk.opacity(0.75)).frame(width: width, alignment: .leading)
+            control.labelsHidden().fixedSize()
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+/// A short paragraph under a control, wrapping from the left.
+struct Note: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+    var body: some View {
+        Text(text).font(.weaveSans(11.5)).foregroundStyle(Color.weaveInk.opacity(0.55))
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

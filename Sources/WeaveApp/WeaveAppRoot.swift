@@ -145,6 +145,43 @@ final class WeaveAppRoot {
         run("Stop all") { for name in names { try await fabric.stop(name) } }
     }
 
+    /// Stops and deletes every spawned AII (the host moves back to the main AII first).
+    func removeAll() {
+        let fabric = self.fabric, host = self.host, root = settings.state.rootFolder
+        let names = fabric.state.threads.map(\.name)
+        shell.set(.select(nil))
+        explorer.select(nil)
+        run("Remove all AIIs") {
+            if host.state.selection != .main { try await host.select(.main, root: root) }
+            for name in names { try await fabric.remove(name) }
+            await fabric.measure()
+        }
+    }
+
+    /// Everything Weave made, gone: every spawned AII, Weave's folder, and Weave's registration
+    /// in ~/.rao (its secret and its lane). Then Weave quits; drag it to the Trash to finish.
+    func uninstall() {
+        let fabric = self.fabric, root = FabricRoot.url(settings.state.rootFolder)
+        let names = fabric.state.threads.map(\.name)
+        let shell = self.shell
+        Task {
+            do {
+                port.stop()
+                fabric.watch(interval: nil)
+                host.watch(interval: nil)
+                HostService.shutdownSync(stopSpawned: true, records: fabric.state.threads)
+                for name in names { try await fabric.remove(name) }
+                try? FileManager.default.removeItem(at: root)
+                try? FileManager.default.removeItem(at: WeaveIdentity.supportDirectory)
+                try FabricSeeding.unregister()
+                settings.set(.reset)
+                NSApp.terminate(nil)
+            } catch {
+                shell.present(AppError("Remove Weave", error))
+            }
+        }
+    }
+
     func selectHost(_ selection: HostSelection) {
         let host = self.host, root = settings.state.rootFolder
         run("Host \(selection)") { try await host.select(selection, root: root) }

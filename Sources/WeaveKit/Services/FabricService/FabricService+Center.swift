@@ -30,6 +30,11 @@ extension FabricService {
             public var loopRunning = false
             public var lastTick: Date?
             public var lastError: String?
+            /// What the fabric holds on disk, and when it was measured.
+            public var diskBytes: Int64?
+            public var measuredAt: Date?
+            /// AIIs an earlier Weave left in ~/.rao/weave, when there are any.
+            public var legacyNote: String?
             public init() {}
 
             public func record(_ name: String) -> ThreadRecord? { threads.first { $0.name == name } }

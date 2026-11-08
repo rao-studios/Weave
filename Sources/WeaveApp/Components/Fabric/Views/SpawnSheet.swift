@@ -27,9 +27,7 @@ struct SpawnSheet: View {
                 WeaveMark(size: 26)
                 Text("Spawn an AII").font(.weaveSerif(22, weight: .medium, italic: true))
             }
-            Text("A new AII home in \(root): its own Thread on its own ports, embedding with voyage-4-nano and sharing the models already in ~/.rao. It starts woven into the host.")
-                .font(.weaveSans(12)).foregroundStyle(Color.weaveInk.opacity(0.65))
-                .fixedSize(horizontal: false, vertical: true)
+            Note("A new AII home in Weave's folder: its own Thread on its own ports, embedding with voyage-4-nano and sharing the models already in ~/.rao. It starts woven into the host.")
             VStack(alignment: .leading, spacing: 6) {
                 SectionCaption("Name")
                 TextField("alpha", text: $name).textFieldStyle(.roundedBorder).font(.weaveMono(13)).onSubmit(submit)
