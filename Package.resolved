@@ -1,5 +1,5 @@
 {
-  "originHash" : "d01bc61d092caaecd1c318ed0af7597a84ea016347db7970908c10c81f8dac2d",
+  "originHash" : "6aff23abc1a3c92a43779b47841f2e500bdac5966495f2f69cbef254dea7f3da",
   "pins" : [
     {
       "identity" : "aii",
@@ -7,7 +7,7 @@
       "location" : "https://github.com/rao-studios/AII.git",
       "state" : {
         "branch" : "main",
-        "revision" : "1291a94ec2f6ad6a2b75a6c053993a15a1971c2f"
+        "revision" : "506d0b5842967e27065784e877a891b4f10d187e"
       }
     },
     {
