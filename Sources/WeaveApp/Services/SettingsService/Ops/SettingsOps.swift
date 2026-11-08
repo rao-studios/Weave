@@ -27,6 +27,7 @@ enum SettingsOps {
         state.softCap = min(max(state.softCap, 1), 39)
         state.searchTopK = min(max(state.searchTopK, 1), 50)
         if state.defaultGraphBackend != "keyword" { state.defaultGraphBackend = "mlx" }
-        if state.rootFolder.trimmingCharacters(in: .whitespaces).isEmpty { state.rootFolder = FabricRoot.defaultPath }
+        state.customLocation = state.customLocation.trimmingCharacters(in: .whitespacesAndNewlines)
+        if state.customLocation.isEmpty { state.useCustomLocation = false }
     }
 }

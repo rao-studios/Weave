@@ -19,15 +19,23 @@ extension Settings {
 
                 Card {
                     SectionCaption("Storage")
+                    Toggle("Custom location", isOn: Binding(get: { settings.state.useCustomLocation },
+                                                            set: { WeaveAppRoot.shared.setCustomLocation($0) }))
+                    LabeledRow("Custom folder") {
+                        Text(verbatim: s.customLocation.isEmpty ? "none chosen" : s.customLocation)
+                            .font(.weaveMono(11))
+                            .foregroundStyle(Color.weaveInk.opacity(s.useCustomLocation ? 0.85 : 0.45))
+                            .lineLimit(1).truncationMode(.middle)
+                        Button("Choose…") { WeaveAppRoot.shared.chooseCustomLocation() }.buttonStyle(WeaveButtonStyle())
+                    }
                     KeyValueRow(key: "Spawned AIIs", value: FabricRoot.url(s.rootFolder).path)
                     KeyValueRow(key: "On disk", value: f.diskBytes.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "measuring…",
                                 mono: false)
                     KeyValueRow(key: "In ~/.rao", value: "Weave's secret and lane only, as every Rao app has", mono: false)
-                    Note("Every AII Weave spawns is a full AII home inside Weave's own folder, apart from ~/.rao. Its models are a link to ~/.rao's, so nothing downloads twice and removing an AII never touches them. Any folder on an APFS volume works.")
+                    Note("Every AII Weave spawns is a full AII home, kept in Weave's own folder apart from ~/.rao. Turn on Custom location to keep them elsewhere, such as an external drive: the folder is remembered while the toggle is off, and it must be on an APFS or Mac OS Extended volume. Its models are a link to ~/.rao's, so nothing downloads twice and removing an AII never touches them.")
                     if let legacy = f.legacyNote { Note(legacy).foregroundStyle(Color.weaveAmber) }
                     HStack(spacing: 8) {
                         Button("Reveal in Finder") { WeaveAppRoot.shared.revealRoot() }.buttonStyle(WeaveButtonStyle())
-                        Button("Choose Folder…") { WeaveAppRoot.shared.chooseRoot() }.buttonStyle(WeaveButtonStyle())
                         Button("Remove All AIIs…") { WeaveAppRoot.shared.shell.set(.pendingStorage(.removeAll)) }
                             .buttonStyle(WeaveButtonStyle(destructive: true))
                             .disabled(f.threads.isEmpty)

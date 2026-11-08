@@ -59,7 +59,8 @@ enum SelfTest {
             check(refused == 401, "GET /v1/threads without the secret is refused")
             let secret = try main.readSecret(for: WeaveIdentity.app)
             let threads = try await LoopbackHTTP.json(WeaveThreads.self, LoopbackHTTP.request(port: testPort, path: "/v1/threads", method: "GET", secret: secret))
-            check(threads.threads.map(\.name) == ["alpha"] && threads.ownerId == WeaveIdentity.owner, "GET /v1/threads lists alpha")
+            check(threads.threads.map(\.id).sorted() == ["alpha", ThreadGateway.mainName] && threads.ownerId == WeaveIdentity.owner,
+                  "GET /v1/threads lists alpha and the main AII")
             port.stop()
 
             try await fabric.remove("alpha")

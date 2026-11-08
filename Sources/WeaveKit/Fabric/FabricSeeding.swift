@@ -25,7 +25,8 @@ public enum FabricError: Error, Equatable, LocalizedError {
     case noWeaveSecret
     case noDeviceKey
     case laneMismatch(String)
-    case noHardLinks(String)
+    case noHardLinks(String, format: String?)
+    case unavailable(String)
     case invalidName(String)
     case exists(String)
     case noFreeSlot
@@ -41,7 +42,10 @@ public enum FabricError: Error, Equatable, LocalizedError {
         case .noWeaveSecret: return "The main AII has no secret for Weave."
         case .noDeviceKey: return "The main AII has no device key to share."
         case .laneMismatch(let name): return "\(name)'s lane for Weave does not match the main AII's."
-        case .noHardLinks(let path): return "\(path) cannot hard-link; AII homes need an APFS volume."
+        case .noHardLinks(let path, let format):
+            let volume = format.map { " is on a\("AEIOU".contains($0.prefix(1)) ? "n" : "") \($0) volume, which" } ?? ""
+            return "\(path)\(volume) cannot hard-link, so it cannot hold AII homes. Use an APFS or Mac OS Extended volume, or an APFS disk image on that drive."
+        case .unavailable(let path): return "The custom location \(path) is not there. Is its drive connected? Turn Custom location off in Settings to use Weave's own folder."
         case .invalidName(let name): return "“\(name)” is not a valid name: lowercase letters and digits, starting with a letter, 2–32 long."
         case .exists(let name): return "An AII named \(name) already exists."
         case .noFreeSlot: return "Every port slot Weave plans is in use."

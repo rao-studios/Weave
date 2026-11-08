@@ -59,9 +59,10 @@ final class WeaveAppRoot {
     func boot() async {
         let s = settings.state
         do {
+            try checkLocation()
             try await fabric.scan(root: s.rootFolder)
         } catch {
-            shell.present(AppError("The fabric's folder", error))
+            shell.present(AppError("Where the AIIs live", error))
         }
         fabric.watch(interval: s.healthInterval)
         if s.portEnabled { port.start(port: s.port, requireSecret: s.requireSecretOnPort) }
@@ -111,6 +112,7 @@ final class WeaveAppRoot {
         let mothership = self.mothership
         Task {
             do {
+                try checkLocation()
                 let record = try await fabric.spawn(name: name, graphBackend: graphBackend, softCap: softCap)
                 try await fabric.start(record.name, mothership: mothership)
             } catch {
@@ -174,6 +176,9 @@ final class WeaveAppRoot {
     func uninstall() {
         let fabric = self.fabric, root = FabricRoot.url(settings.state.rootFolder)
         let names = fabric.state.threads.map(\.name)
+        // The location not in use: Weave's own folder, or a custom one turned off but remembered.
+        let s = settings.state
+        let other = FabricRoot.url(s.useCustomLocation || s.customLocation.isEmpty ? FabricRoot.defaultPath : s.customLocation)
         let shell = self.shell
         Task {
             do {
@@ -182,7 +187,11 @@ final class WeaveAppRoot {
                 host.watch(interval: nil)
                 HostService.shutdownSync(stopSpawned: true, records: fabric.state.threads)
                 for name in names { try await fabric.remove(name) }
-                try? FileManager.default.removeItem(at: root)
+                FabricRoot.removeFabric(root: root)
+                if other != root {
+                    FabricService.stopAllSync(records: FabricRoot.records(root: other))
+                    FabricRoot.removeFabric(root: other)
+                }
                 try? FileManager.default.removeItem(at: WeaveIdentity.supportDirectory)
                 try FabricSeeding.unregister()
                 settings.set(.reset)
@@ -213,27 +222,76 @@ final class WeaveAppRoot {
 
     func rescan() {
         let fabric = self.fabric, root = settings.state.rootFolder
+        do { try checkLocation() } catch { shell.present(AppError("Where the AIIs live", error)); return }
         run("Rescan") { try await fabric.scan(root: root) }
     }
 
-    /// A new folder for the fabric: stored as a plain path (nothing is sandboxed), then scanned.
-    func chooseRoot() {
+    // MARK: - Where the AIIs live
+
+    /// A custom location must already exist (its drive may not be connected): Weave never makes
+    /// one in its place. Weave's own folder is made as needed.
+    func checkLocation() throws {
+        let s = settings.state
+        guard s.useCustomLocation else { return }
+        try FabricRoot.usable(FabricRoot.url(s.rootFolder), mustExist: true)
+    }
+
+    /// The Settings toggle. On with no folder chosen yet opens the panel; off keeps the folder
+    /// for next time and goes back to Weave's own.
+    func setCustomLocation(_ on: Bool) {
+        let s = settings.state
+        guard on != s.useCustomLocation else { return }
+        if on && s.customLocation.isEmpty { chooseCustomLocation(); return }
+        if on {
+            do { try FabricRoot.usable(FabricRoot.url(s.customLocation), mustExist: true) } catch {
+                shell.present(AppError("Custom location", error))
+                return
+            }
+        }
+        relocate { $0.useCustomLocation = on }
+    }
+
+    /// Browse for the custom location; a folder that can hold AII homes is kept and used.
+    func chooseCustomLocation() {
+        let s = settings.state
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
         panel.prompt = "Use Folder"
-        panel.message = "Where Weave keeps the AIIs it spawns. It must be on an APFS volume."
-        panel.directoryURL = FabricRoot.url(settings.state.rootFolder).deletingLastPathComponent()
+        panel.message = "Where Weave keeps the AIIs it spawns. It must be on an APFS or Mac OS Extended volume."
+        panel.directoryURL = s.customLocation.isEmpty ? URL(fileURLWithPath: "/Volumes", isDirectory: true)
+                                                      : FabricRoot.url(s.customLocation).deletingLastPathComponent()
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        settings.update(\.rootFolder, url.path)
-        let fabric = self.fabric, host = self.host, explorer = self.explorer, shell = self.shell
+        do { try FabricRoot.usable(url, mustExist: true) } catch {
+            shell.present(AppError("Custom location", error))
+            return
+        }
+        let path = url.path
+        relocate { $0.customLocation = path; $0.useCustomLocation = true }
+    }
+
+    /// Applies a change to where the AIIs live and scans there. Refused while a spawned AII runs:
+    /// it would go on serving, and answering the host's searches, from a folder Weave no longer shows.
+    private func relocate(_ change: @escaping @Sendable (inout SettingsService.Center.State) -> Void) {
+        let before = settings.state.rootFolder
+        var after = settings.state
+        change(&after)
+        let moves = FabricRoot.url(after.rootFolder) != FabricRoot.url(before)
+        let running = fabric.state.threads.map(\.name).filter { fabric.state.status(of: $0).isRunning }
+        if moves, !running.isEmpty {
+            shell.present(AppError("Where the AIIs live", message: "Stop \(running.joined(separator: ", ")) first: a running AII keeps serving from \(FabricRoot.url(before).path)."))
+            return
+        }
+        settings.set(.write(change))
+        guard moves else { return }
+        let fabric = self.fabric, host = self.host, root = after.rootFolder
         shell.set(.select(nil))
         explorer.select(nil)
-        run("Folder") {
-            try await fabric.scan(root: url.path)
-            try await host.restore(root: url.path)
+        run("Where the AIIs live") {
+            try await fabric.scan(root: root)
+            try await host.restore(root: root)
         }
     }
 

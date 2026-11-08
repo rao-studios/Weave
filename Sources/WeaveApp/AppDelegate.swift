@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc func startAll(_ sender: Any?) { root.startAll() }
     @objc func stopAll(_ sender: Any?) { root.stopAll() }
     @objc func revealRoot(_ sender: Any?) { root.revealRoot() }
-    @objc func chooseRoot(_ sender: Any?) { root.chooseRoot() }
+    @objc func chooseCustomLocation(_ sender: Any?) { root.chooseCustomLocation() }
     @objc func showFabric(_ sender: Any?) { root.show(.fabric) }
     @objc func showExplorer(_ sender: Any?) { root.show(.explorer) }
     @objc func showSearch(_ sender: Any?) { root.show(.search) }

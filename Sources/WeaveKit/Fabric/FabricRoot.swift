@@ -53,12 +53,41 @@ public enum FabricRoot {
         return link(a.path, b.path) == 0
     }
 
+    /// The volume's format, as Finder names it ("APFS", "ExFAT").
+    public static func volumeFormat(_ url: URL) -> String? {
+        try? url.resourceValues(forKeys: [.volumeLocalizedFormatDescriptionKey]).volumeLocalizedFormatDescription
+    }
+
+    /// Throws unless `root` can hold AII homes. With `mustExist` (a custom location, maybe on a
+    /// drive that is not connected), a missing folder is refused rather than made.
+    public static func usable(_ root: URL, mustExist: Bool = false) throws {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: root.path, isDirectory: &isDirectory) else {
+            if mustExist { throw FabricError.unavailable(root.path) }
+            return
+        }
+        guard isDirectory.boolValue, supportsHardLinks(root) else { throw FabricError.noHardLinks(root.path, format: volumeFormat(root)) }
+    }
+
+    /// Removes what Weave made in `root` and nothing else: every AII home (a folder with a
+    /// `weave.json`), `fabric.json` and the models link, then the folder itself only if that left
+    /// it empty. A custom location may be a folder that holds other things.
+    public static func removeFabric(root: URL) {
+        let fm = FileManager.default
+        for record in records(root: root) { try? fm.removeItem(atPath: record.home) }
+        try? fm.removeItem(at: root.appendingPathComponent(FabricFile.fileName))
+        let models = root.appendingPathComponent("models", isDirectory: true)
+        try? fm.removeItem(at: sharedModels(root: root))
+        if (try? fm.contentsOfDirectory(atPath: models.path))?.isEmpty == true { try? fm.removeItem(at: models) }
+        if (try? fm.contentsOfDirectory(atPath: root.path))?.filter({ $0 != ".DS_Store" }).isEmpty == true { try? fm.removeItem(at: root) }
+    }
+
     /// Makes the root exist, checks it can hold AII homes, links the shared models folder and
     /// writes `fabric.json` when absent. Answers the fabric file.
     @discardableResult
     public static func ensure(root: URL, main: AIIHome = .resolved()) throws -> FabricFile {
         try PrivateFile.ensureDirectory(root)
-        guard supportsHardLinks(root) else { throw FabricError.noHardLinks(root.path) }
+        try usable(root)
         let models = sharedModels(root: root)
         if !FileManager.default.fileExists(atPath: models.path) {
             try FileManager.default.createDirectory(at: models.deletingLastPathComponent(), withIntermediateDirectories: true)

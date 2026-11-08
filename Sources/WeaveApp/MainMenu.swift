@@ -30,7 +30,7 @@ enum MainMenu {
         file.addItem(item("Start All", #selector(AppDelegate.startAll(_:)), "", target))
         file.addItem(item("Stop All", #selector(AppDelegate.stopAll(_:)), "", target))
         file.addItem(.separator())
-        file.addItem(item("Choose Folder…", #selector(AppDelegate.chooseRoot(_:)), "o", target))
+        file.addItem(item("Choose Custom Location…", #selector(AppDelegate.chooseCustomLocation(_:)), "o", target))
         file.addItem(item("Reveal Folder in Finder", #selector(AppDelegate.revealRoot(_:)), "", target))
         file.addItem(item("Copy Weave's Port URL", #selector(AppDelegate.copyPortURL(_:)), "", target))
         file.addItem(item("Request Examples…", #selector(AppDelegate.showConnect(_:)), "", target))

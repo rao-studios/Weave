@@ -138,4 +138,35 @@ import WeaveKitTestSupport
         try FabricRoot.ensure(root: scratch.root, main: scratch.main)
         #expect(FabricRoot.diskUsage(root: scratch.root) < 1_000_000, "the shared models are ~/.rao's, not the fabric's")
     }
+
+    @Test func aCustomLocationMustAlreadyBeThereAndHoldHardLinks() throws {
+        let scratch = Scratch(); defer { scratch.clean() }
+        let missing = scratch.url.appendingPathComponent("unplugged/rao/weave", isDirectory: true)
+        #expect(throws: FabricError.unavailable(missing.path)) { try FabricRoot.usable(missing, mustExist: true) }
+        #expect(!FileManager.default.fileExists(atPath: missing.path), "nothing is made in its place")
+        try FabricRoot.usable(missing)
+        try FileManager.default.createDirectory(at: missing, withIntermediateDirectories: true)
+        try FabricRoot.usable(missing, mustExist: true)
+        let exfat = FabricError.noHardLinks("/Volumes/T9/rao/weave", format: "ExFAT").errorDescription ?? ""
+        #expect(exfat.contains("is on an ExFAT volume") && exfat.contains("APFS"))
+    }
+
+    @Test func removingAFabricFromAFolderLeavesWhatWeaveDidNotMake() throws {
+        let scratch = Scratch(); defer { scratch.clean() }
+        let fabric = try FabricSeeding.prepareMain(scratch.main)
+        try FabricRoot.ensure(root: scratch.root, main: scratch.main)
+        let home = AIIHome(root: scratch.root.appendingPathComponent("alpha", isDirectory: true))
+        try FabricSeeding.provision(home: home, main: scratch.main, fabric: fabric)
+        try Fixtures.record("alpha", home: home.root.path).write()
+        let mine = scratch.root.appendingPathComponent("notes.txt")
+        try Data("mine".utf8).write(to: mine)
+        FabricRoot.removeFabric(root: scratch.root)
+        #expect(!FileManager.default.fileExists(atPath: home.root.path))
+        #expect(!FileManager.default.fileExists(atPath: scratch.root.appendingPathComponent(FabricFile.fileName).path))
+        #expect(FileManager.default.fileExists(atPath: mine.path), "a custom folder's other files stay")
+        try FileManager.default.removeItem(at: mine)
+        try FabricRoot.ensure(root: scratch.root, main: scratch.main)
+        FabricRoot.removeFabric(root: scratch.root)
+        #expect(!FileManager.default.fileExists(atPath: scratch.root.path), "an emptied folder goes")
+    }
 }
