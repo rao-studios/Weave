@@ -2,7 +2,7 @@
 // WHAT: Render Weave's app icon: a knitted cloth (stockinette, rows of V stitches in graphite
 //       yarn) with a steel needle laid across it, a vermilion thread through its eye running
 //       down and stitched into the cloth. The thread is what Weave adds: one line through every
-//       piece. After Veil's scripts/art/gen-app-icon.swift.
+//       piece. After Veil's Scripts/art/gen-app-icon.swift.
 // OUT:  Support/AppIcon/icon_1024.png (the .icns fallback, via make-iconset.sh),
 //       Support/AppIcon/AppIcon.icon/Assets/icon_1024.png (the layer macOS 26+ draws), and
 //       Sources/WeaveApp/Resources/AppIcon.png (the Dock icon when Weave runs unbundled, and the
@@ -12,7 +12,7 @@
 //       corners r 185.4, a soft shadow), since nothing masks an icon set at runtime.
 // PIN:  AppIcon.icon draws the layer at scale 1: the cloth runs edge to edge, as Veil's grid does.
 //
-//   swift scripts/art/gen-app-icon.swift
+//   swift Scripts/art/gen-app-icon.swift
 //
 import AppKit
 import SwiftUI

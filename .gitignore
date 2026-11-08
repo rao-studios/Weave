@@ -62,7 +62,7 @@ fastlane/screenshots/**/*.png
 fastlane/test_output
 
 ## Weave
-build/
+/build/
 .build/
 .swiftpm/configuration/
 .vscode/

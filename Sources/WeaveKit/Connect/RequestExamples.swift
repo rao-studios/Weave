@@ -2,10 +2,11 @@
 //  RequestExamples.swift
 //  WeaveKit
 //
-//  The requests another app makes to Weave's port, written out to copy: list the AIIs (each entry's
-//  `id` is what an insert names), file a record into one, search one, search every one, list one's
-//  records. In curl, Swift and JavaScript, and a whole client (a small network service) for Swift
-//  and JavaScript. Each reads Weave's key from ~/.rao/secrets/weave when the port asks for it.
+//  The requests another app makes to Weave's port, written out to copy. Each body is the AII's own
+//  (Thread's insert, search, library and graph bodies; Sewn's search body for a search across every
+//  AII) plus Weave's routing spec, `"weave": {"aii": …, "wait": …}`. Each example also says its
+//  direct form: the same body without `weave`, to the AII's Thread with that AII's key. In curl,
+//  Swift and JavaScript, with a whole thin client for Swift and JavaScript.
 //
 
 import Foundation
@@ -22,41 +23,118 @@ public enum RequestFormat: String, CaseIterable, Sendable, Hashable, Identifiabl
     }
 }
 
+/// A JSON value with its keys kept in the order they are written, so a body reads as the AII's
+/// documentation lays it out.
+public indirect enum JSONValue: Sendable, Equatable {
+    case string(String)
+    case number(Double)
+    case bool(Bool)
+    case array([JSONValue])
+    case object([(String, JSONValue)])
+
+    public static func == (a: JSONValue, b: JSONValue) -> Bool { a.json == b.json }
+
+    public var json: String {
+        switch self {
+        case .string(let s): return Self.quote(s)
+        case .number(let n): return n == n.rounded() ? String(Int(n)) : String(n)
+        case .bool(let b): return b ? "true" : "false"
+        case .array(let items): return "[" + items.map(\.json).joined(separator: ", ") + "]"
+        case .object(let pairs): return "{" + pairs.map { "\(Self.quote($0.0)): \($0.1.json)" }.joined(separator: ", ") + "}"
+        }
+    }
+
+    /// The same value as a Swift literal (`[String: Any]` for an object).
+    public var swift: String {
+        switch self {
+        case .object(let pairs) where pairs.isEmpty: return "[:]"
+        case .object(let pairs): return "[" + pairs.map { "\(Self.quote($0.0)): \($0.1.swift)" }.joined(separator: ", ") + "]"
+        case .array(let items): return "[" + items.map(\.swift).joined(separator: ", ") + "]"
+        default: return json
+        }
+    }
+
+    static func quote(_ s: String) -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: s, options: [.fragmentsAllowed, .withoutEscapingSlashes])) ?? Data()
+        return String(decoding: data, as: UTF8.self)
+    }
+}
+
 public struct RequestExample: Sendable, Equatable, Identifiable {
-    public enum Kind: String, Sendable, CaseIterable { case threads, insert, searchOne, searchAll, records }
+    public enum Kind: String, Sendable, CaseIterable { case threads, insert, searchOne, searchAll, library, graph }
     public let kind: Kind
     public let title: String
     public let detail: String
     public let method: String
     public let path: String
-    /// The JSON body, compact, as it is sent.
-    public let body: String?
+    /// The AII the request routes to (nil: Weave's own route, or the host's Sewn).
+    public let aii: String?
+    /// `weave.wait`: a Thread insert answers once searchable.
+    public let wait: Bool
+    /// The AII's own body, as it would go to the AII directly.
+    public let own: JSONValue?
+    /// Whether this request has a direct form: an AII's Thread route, not Weave's own nor the host's.
+    public var direct: Bool { aii != nil }
     public var id: String { kind.rawValue }
+
+    /// The body Weave's port takes: the routing spec, then the AII's own body.
+    public var body: String? {
+        guard case .object(let pairs)? = own else { return nil }
+        guard let aii else { return own?.json }
+        var spec: [(String, JSONValue)] = [("aii", .string(aii))]
+        if wait { spec.append(("wait", .bool(true))) }
+        return JSONValue.object([("weave", .object(spec))] + pairs).json
+    }
 }
 
 public enum RequestExamples {
     public static let sampleText = "The Jacquard loom reads a chain of punched cards; each card lifts the warp threads for one pass."
     public static let sampleQuery = "punched cards"
+    static let owner = JSONValue.string(WeaveIdentity.owner)
 
     public static func all(thread: String) -> [RequestExample] {
         [
-            RequestExample(kind: .threads, title: "See the AIIs you can file into",
-                           detail: "Each entry's id goes in \"thread\". accepting is true while its Thread is up; main is the main AII.",
-                           method: "GET", path: "/v1/threads", body: nil),
-            RequestExample(kind: .insert, title: "File a record into an AII",
-                           detail: "Weave answers once the record is searchable (indexed: true), so a search right after finds it. Send records: [{text, name}] for several.",
-                           method: "POST", path: "/v1/records",
-                           body: json(["thread": thread, "text": sampleText, "name": "loom-note", "group": "Notes"])),
+            RequestExample(kind: .threads, title: "See the AIIs a request can route to",
+                           detail: "Each entry's id goes in \"weave\": {\"aii\": id}; main is the main AII. direct is its Thread's own URL and key file.",
+                           method: "GET", path: "/v1/threads", aii: nil, wait: false, own: nil),
+            RequestExample(kind: .insert, title: "File records into an AII",
+                           detail: "Thread's own insert body; entities, relationships, tags, metadata and media_type pass through untouched. Entities you name are in the graph at once, and a search that matches an entity looks among the records that carry it; the on-device extractor adds more as it reads. With wait, Weave answers once every input is searchable.",
+                           method: "POST", path: "/v1/batch/embeddings", aii: thread, wait: true,
+                           own: .object([
+                            ("inputs", .array([.string(sampleText)])),
+                            ("names", .array([.string("loom-note")])),
+                            ("sanitize", .bool(true)),
+                            ("thread", .object([("owner_id", owner),
+                                                ("group", .object([("id", .string("notes")), ("label", .string("Notes")), ("owner_id", owner)]))])),
+                            ("entities", .array([.array([.object([("name", .string("Jacquard loom")), ("kind", .string("machine"))]),
+                                                         .object([("name", .string("punched cards")), ("kind", .string("concept"))])])])),
+                           ])),
             RequestExample(kind: .searchOne, title: "Search that AII alone",
-                           detail: "The same answer shape as a federated search, every hit from that AII.",
-                           method: "POST", path: "/v1/search", body: json(["query": sampleQuery, "thread": thread, "top_k": 5])),
+                           detail: "Thread's own search body: filter by group, groups, entities, aggregate or media_type in thread.",
+                           method: "POST", path: "/v1/search", aii: thread, wait: false,
+                           own: .object([("query", .string(sampleQuery)),
+                                         ("thread", .object([("owner_id", owner), ("scope", .string("global")), ("top_k", .number(5))]))])),
             RequestExample(kind: .searchAll, title: "Search every AII at once",
-                           detail: "The host fans the query out to every woven Thread and merges by score; each hit says which AII held it.",
-                           method: "POST", path: "/v1/search", body: json(["query": sampleQuery, "top_k": 10])),
-            RequestExample(kind: .records, title: "List an AII's records",
-                           detail: "Its groups and documents in Weave's lane.",
-                           method: "GET", path: "/v1/threads/\(thread)/records", body: nil),
+                           detail: "No aii: Sewn's own search body, to the host, which fans out to every woven AII and merges by score. weave.threads names the AII behind each thread_id.",
+                           method: "POST", path: "/v1/search", aii: nil, wait: false,
+                           own: .object([("query", .string(sampleQuery)), ("top_k", .number(10)),
+                                         ("sewn", .object([("owner_id", owner), ("scope", .string("global"))]))])),
+            RequestExample(kind: .library, title: "List an AII's records",
+                           detail: "Thread's own library body: its groups and their documents.",
+                           method: "POST", path: "/v1/library", aii: thread, wait: false,
+                           own: .object([("owner_id", owner), ("include_available", .bool(true))])),
+            RequestExample(kind: .graph, title: "Walk an AII's graph",
+                           detail: "Thread's own graph body: the entities and relationships it extracted on device, near a query or an entity.",
+                           method: "POST", path: "/v1/graph", aii: thread, wait: false,
+                           own: .object([("thread", .object([("owner_id", owner)])), ("query", .string("looms")),
+                                         ("hops", .number(1)), ("limit", .number(20))])),
         ]
+    }
+
+    /// The direct form of an example, for the AII's Thread at `url` with the key in `keyFile`.
+    public static func direct(_ example: RequestExample, url: String, keyFile: String) -> String? {
+        guard example.direct else { return nil }
+        return "Direct, without Weave: \(example.method) \(url)\(example.path) with X-Ambient-Secret from \(keyFile), the same body without \"weave\"."
     }
 
     // MARK: - Code
@@ -80,73 +158,34 @@ public enum RequestExamples {
     }
 
     static func swiftCall(_ example: RequestExample) -> String {
-        let thread = threadIn(example) ?? "alpha"
+        let route = example.aii.map { "aii: \(JSONValue.quote($0)), " } ?? ""
+        let wait = example.wait ? "wait: true, " : ""
         switch example.kind {
         case .threads:
             return """
-            let weave = WeaveService()
-            for thread in try await weave.threads() where thread.accepting {
-                print(thread.id, thread.label)
+            for thread in try await WeaveService().threads() where thread.accepting {
+                print(thread.id, thread.label, thread.direct.url)
             }
             """
-        case .insert:
+        default:
             return """
-            let receipt = try await WeaveService().insert(
-                "\(sampleText)",
-                into: "\(thread)", name: "loom-note", group: "Notes")
-            print(receipt.indexed ? "searchable now" : "indexing", receipt.documents)
-            """
-        case .searchOne:
-            return """
-            let hits = try await WeaveService().search("\(sampleQuery)", in: "\(thread)", topK: 5)
-            hits.forEach { print($0.rank, $0.text) }
-            """
-        case .searchAll:
-            return """
-            let hits = try await WeaveService().search("\(sampleQuery)")
-            hits.forEach { print($0.rank, $0.threadName ?? "?", $0.text) }
-            """
-        case .records:
-            return """
-            for group in try await WeaveService().records(in: "\(thread)") {
-                print(group.label, group.documents.count)
-            }
+            let answer = try await WeaveService().post("\(example.path)", \(route)\(wait)body: \(example.own?.swift ?? "[:]"))
+            print(answer)
             """
         }
     }
 
     static func javascriptCall(_ example: RequestExample) -> String {
-        let thread = threadIn(example) ?? "alpha"
         switch example.kind {
         case .threads:
             return """
             const { threads } = await weave("GET", "/v1/threads");
-            console.log(threads.filter((t) => t.accepting).map((t) => [t.id, t.label]));
+            console.log(threads.filter((t) => t.accepting).map((t) => [t.id, t.label, t.direct.url]));
             """
-        case .insert:
+        default:
             return """
-            const receipt = await weave("POST", "/v1/records", {
-              thread: "\(thread)",
-              text: "\(sampleText)",
-              name: "loom-note",
-              group: "Notes",
-            });
-            console.log(receipt.indexed, receipt.documents);
-            """
-        case .searchOne:
-            return """
-            const { hits } = await weave("POST", "/v1/search", { query: "\(sampleQuery)", thread: "\(thread)", top_k: 5 });
-            hits.forEach((h) => console.log(h.rank, h.text));
-            """
-        case .searchAll:
-            return """
-            const { hits } = await weave("POST", "/v1/search", { query: "\(sampleQuery)", top_k: 10 });
-            hits.forEach((h) => console.log(h.rank, h.thread_name, h.text));
-            """
-        case .records:
-            return """
-            const { groups } = await weave("GET", "/v1/threads/\(thread)/records");
-            groups.forEach((g) => console.log(g.label, g.documents.length));
+            const answer = await weave("\(example.method)", "\(example.path)", \(example.body ?? "undefined"));
+            console.log(JSON.stringify(answer));
             """
         }
     }
@@ -173,21 +212,21 @@ public enum RequestExamples {
         return """
         import Foundation
 
-        /// Weave on this Mac: its AIIs, records filed into one, searches of one or all of them.
+        /// Weave on this Mac, as a forwarder: each call is an AII's own request (Thread's insert,
+        /// search, library and graph; Sewn's search across every AII), routed by `aii`. To go to an
+        /// AII directly later, send the same body to its `direct.url` with the key in its `direct.key_file`.
         final class WeaveService {
-            struct Thread: Decodable { let id: String; let label: String; let status: String; let accepting: Bool }
-            struct Receipt: Decodable { let thread: String; let filed: Int; let indexed: Bool; let documents: Int }
-            struct Hit: Decodable {
-                let rank: Int
-                let text: String
-                let threadName: String?
-                enum CodingKeys: String, CodingKey { case rank, text, threadName = "thread_name" }
-            }
-            struct Group: Decodable {
-                struct Document: Decodable { let id: String; let name: String? }
+            struct Thread: Decodable {
+                struct Direct: Decodable {
+                    let url: String
+                    let keyFile: String
+                    enum CodingKeys: String, CodingKey { case url, keyFile = "key_file" }
+                }
                 let id: String
                 let label: String
-                let documents: [Document]
+                let status: String
+                let accepting: Bool
+                let direct: Direct
             }
 
             let base: URL
@@ -197,45 +236,37 @@ public enum RequestExamples {
                 base = URL(string: "http://127.0.0.1:\\(port)")!\(key)
             }
 
+            /// The AIIs a request can route to.
             func threads() async throws -> [Thread] {
                 struct Answer: Decodable { let threads: [Thread] }
-                return try await call("GET", "/v1/threads", nil, as: Answer.self).threads
+                let (data, _) = try await send("GET", "/v1/threads", nil)
+                return try JSONDecoder().decode(Answer.self, from: data).threads
             }
 
-            func insert(_ text: String, into thread: String, name: String? = nil, group: String? = nil) async throws -> Receipt {
-                var body: [String: Any] = ["thread": thread, "text": text]
-                if let name { body["name"] = name }
-                if let group { body["group"] = group }
-                return try await call("POST", "/v1/records", body, as: Receipt.self)
+            /// An AII's own request, forwarded: `body` is exactly what the AII takes on `path`.
+            /// `aii` routes it (nil: a search across every AII); `wait` holds an insert until searchable.
+            func post(_ path: String, aii: String? = nil, wait: Bool = false, body: [String: Any]) async throws -> [String: Any] {
+                var routed = body
+                if let aii { routed["weave"] = ["aii": aii, "wait": wait] }
+                let (data, _) = try await send("POST", path, try JSONSerialization.data(withJSONObject: routed))
+                return (try JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
             }
 
-            func search(_ query: String, in thread: String? = nil, topK: Int = 10) async throws -> [Hit] {
-                struct Answer: Decodable { let hits: [Hit] }
-                var body: [String: Any] = ["query": query, "top_k": topK]
-                if let thread { body["thread"] = thread }
-                return try await call("POST", "/v1/search", body, as: Answer.self).hits
-            }
-
-            func records(in thread: String) async throws -> [Group] {
-                struct Answer: Decodable { let groups: [Group] }
-                return try await call("GET", "/v1/threads/\\(thread)/records", nil, as: Answer.self).groups
-            }
-
-            private func call<T: Decodable>(_ method: String, _ path: String, _ body: [String: Any]?, as type: T.Type) async throws -> T {
+            private func send(_ method: String, _ path: String, _ body: Data?) async throws -> (Data, Int) {
                 var request = URLRequest(url: base.appendingPathComponent(path))
                 request.httpMethod = method
                 if let key { request.setValue(key, forHTTPHeaderField: "X-Ambient-Secret") }
                 if let body {
                     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                    request.httpBody = try JSONSerialization.data(withJSONObject: body)
+                    request.httpBody = body
                 }
                 let (data, response) = try await URLSession.shared.data(for: request)
                 let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-                guard status == 200 else {
+                guard (200..<300).contains(status) else {
                     throw NSError(domain: "Weave", code: status,
                                   userInfo: [NSLocalizedDescriptionKey: String(decoding: data, as: UTF8.self)])
                 }
-                return try JSONDecoder().decode(T.self, from: data)
+                return (data, status)
             }
         }
         """
@@ -251,7 +282,9 @@ public enum RequestExamples {
 
         """ : "const key = null;\n\n"
         return """
-        // Weave on this Mac: its AIIs, records filed into one, searches of one or all of them (Node 18+).
+        // Weave on this Mac, as a forwarder (Node 18+): each call is an AII's own request plus
+        // "weave": {"aii": id}. To go to an AII directly later, drop "weave" and send the same body
+        // to its direct.url with the key in its direct.key_file.
         \(key)const base = "http://127.0.0.1:\(port)";
 
         export async function weave(method, path, body) {
@@ -263,29 +296,5 @@ public enum RequestExamples {
           return response.json();
         }
         """
-    }
-
-    // MARK: - Pieces
-
-    private static func json(_ object: [String: Any]) -> String {
-        let data = (try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])) ?? Data()
-        // Keys in reading order rather than sorted: thread first, then what is filed or asked.
-        let order = ["thread", "query", "text", "name", "group", "top_k"]
-        guard let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return String(decoding: data, as: UTF8.self) }
-        let parts = order.compactMap { key -> String? in
-            guard let value = parsed[key] else { return nil }
-            let encoded = (try? JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .withoutEscapingSlashes]))
-                .map { String(decoding: $0, as: UTF8.self) } ?? "null"
-            return "\"\(key)\": \(encoded)"
-        }
-        return "{" + parts.joined(separator: ", ") + "}"
-    }
-
-    private static func threadIn(_ example: RequestExample) -> String? {
-        guard let body = example.body?.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else {
-            return example.kind == .records ? example.path.split(separator: "/").dropFirst(2).first.map(String.init) : nil
-        }
-        return object["thread"] as? String
     }
 }

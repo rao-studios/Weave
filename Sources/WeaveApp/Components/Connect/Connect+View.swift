@@ -13,9 +13,10 @@ extension Connect {
         let p = port.state
         let thread = ConnectOps.thread(c.thread, records: fabric.state.threads)
         let examples = RequestExamples.all(thread: thread)
+        let direct = ConnectOps.direct(thread, records: fabric.state.threads)
         return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                PageHeader(title: "Connect", subtitle: "File records into an AII and search them from another app, through Weave's port") { EmptyView() }
+                PageHeader(title: "Connect", subtitle: "Each AII's own API, through Weave's port: the AII's body plus \"weave\": {\"aii\": …}") { EmptyView() }
 
                 Card {
                     SectionCaption("Weave's port")
@@ -50,7 +51,7 @@ extension Connect {
                             copyButton(client, id: "client")
                         }
                         Note(c.format == .swift
-                             ? "Drop it into your app as your network service; each call below uses it."
+                             ? "Drop it into your app as your network service: post(path, aii:, body:) forwards any AII request; each call below uses it."
                              : "Save it as weave.mjs and import { weave } from it; each call below uses it.")
                         CodeBlock(code: client, maxHeight: 260)
                     }
@@ -59,6 +60,7 @@ extension Connect {
                 ForEach(examples) { example in
                     ExampleCard(example: example,
                                 code: RequestExamples.code(example, format: c.format, port: p.port, requireSecret: p.requireSecret),
+                                direct: RequestExamples.direct(example, url: direct.url, keyFile: direct.keyFile),
                                 result: c.results[example.id], running: c.running.contains(example.id),
                                 copied: state.copied == example.id)
                         .onBubble {

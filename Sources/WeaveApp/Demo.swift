@@ -7,7 +7,7 @@
 //  gamma on keywords), starts them woven into the main AII, files three related notes into each
 //  (the loom, the engine, the notes: one story across three partitions), waits for the graphs,
 //  and exits with the Threads running. Clear stops and removes them.
-//  Used by scripts/art/readme-shots.sh.
+//  Used by Scripts/art/readme-shots.sh.
 //
 
 import Foundation

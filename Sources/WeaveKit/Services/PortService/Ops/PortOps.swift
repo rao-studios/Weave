@@ -72,10 +72,14 @@ public enum PortOps {
                                 accepting: up)
     }
 
-    public static func searchResponse(_ response: SewnSearchResponse, snapshot: Snapshot, mainThreadHTTP: Int?) -> WeaveSearchResponse {
-        let hits = SearchOps.hits(response, nodes: snapshot.host.nodes, records: snapshot.fabric.threads, mainThreadHTTP: mainThreadHTTP)
-        return WeaveSearchResponse(host: snapshot.hostInfo, texts: response.texts, references: response.references, hits: hits,
-                                   graph: response.graph)
+    /// The AII id of each Thread the host fans out to, for a search across every AII.
+    public static func names(_ snapshot: Snapshot, mainThreadHTTP: Int?) -> [String: String] {
+        var names: [String: String] = [:]
+        for node in snapshot.host.nodes {
+            if let record = snapshot.fabric.threads.first(where: { $0.threadHTTP == node.httpPort }) { names[node.threadId] = record.name }
+            else if node.httpPort == mainThreadHTTP { names[node.threadId] = ThreadGateway.mainName }
+        }
+        return names
     }
 }
 
@@ -94,27 +98,18 @@ struct LiveGatewaySource: WeaveGatewaySource {
 
     func threads() async -> WeaveThreads { PortOps.threads(await snapshot()) }
 
-    func search(_ request: WeaveSearchRequest) async throws -> WeaveSearchResponse {
+    func route(aii: String) async throws -> ForwardTarget {
         let snapshot = await snapshot()
-        guard let target = snapshot.host.target, snapshot.host.sewn.isUp else { throw FabricError.noHost }
-        let response = try await SewnHTTPClient.forTarget(target).search(request.query, topK: request.topK ?? 10)
-        return PortOps.searchResponse(response, snapshot: snapshot, mainThreadHTTP: SearchOps.mainThreadHTTP())
+        let endpoint = try ExplorerOps.endpoint(ThreadGateway.ref(aii), records: snapshot.fabric.threads)
+        guard let secret = try endpoint.home.readSecret(for: WeaveIdentity.app) else { throw FabricError.noWeaveSecret }
+        return ForwardTarget(aii: aii, port: endpoint.threadHTTP, secret: secret)
     }
 
-    func push(_ request: WeavePushRequest, thread: String) async throws -> WeavePushResponse {
-        try await ThreadGateway.push(request, thread: thread, endpoint: endpoint(thread, await snapshot()))
-    }
-
-    func search(_ request: WeaveThreadSearchRequest, thread: String) async throws -> WeaveThreadSearchResponse {
-        try await ThreadGateway.search(request, thread: thread, endpoint: endpoint(thread, await snapshot()))
-    }
-
-    func records(thread: String) async throws -> WeaveRecordsResponse {
-        try await ThreadGateway.records(thread: thread, endpoint: endpoint(thread, await snapshot()))
-    }
-
-    private func endpoint(_ thread: String, _ snapshot: PortOps.Snapshot) throws -> ExplorerOps.Endpoint {
-        try ExplorerOps.endpoint(ThreadGateway.ref(thread), records: snapshot.fabric.threads)
+    func host() async throws -> (target: ForwardTarget, names: [String: String]) {
+        let snapshot = await snapshot()
+        guard let target = snapshot.host.target, snapshot.host.sewn.isUp, let secret = target.secret() else { throw FabricError.noHost }
+        return (ForwardTarget(aii: nil, port: target.sewnPorts.http, secret: secret),
+                PortOps.names(snapshot, mainThreadHTTP: SearchOps.mainThreadHTTP()))
     }
 
     func secret() -> String? { try? AIIHome.resolved().readSecret(for: WeaveIdentity.app) }

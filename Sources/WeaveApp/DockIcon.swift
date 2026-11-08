@@ -2,7 +2,7 @@
 //  DockIcon.swift
 //  Weave
 //
-//  scripts/dev/dev.sh runs Weave as a bare executable, which the Dock shows with the generic icon.
+//  Scripts/dev/dev.sh runs Weave as a bare executable, which the Dock shows with the generic icon.
 //  Outside a bundle, set Weave's own (Resources/AppIcon.png, the pre-rounded tile). A bundled
 //  Weave.app takes its layered icon from Assets.car, so a bundle is left alone. The bundle check
 //  comes first: Bundle.module traps when its resources are missing.

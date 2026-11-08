@@ -6,9 +6,9 @@
 # NEEDS: the main AII installed and running, the AII build that grants POST /v1/search, and Screen
 #        Recording for the terminal (screencapture -l).
 #
-#   ./scripts/art/readme-shots.sh
-#   KEEP=1 ./scripts/art/readme-shots.sh       # leave the demo AIIs running afterwards
-#   SEED=0 ./scripts/art/readme-shots.sh       # capture a demo fabric already seeded (after KEEP=1)
+#   ./Scripts/art/readme-shots.sh
+#   KEEP=1 ./Scripts/art/readme-shots.sh       # leave the demo AIIs running afterwards
+#   SEED=0 ./Scripts/art/readme-shots.sh       # capture a demo fabric already seeded (after KEEP=1)
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -29,7 +29,7 @@ for w in list where (w[kCGWindowOwnerName as String] as? String) == "Weave" && (
 SWIFT
 
 # Always from the source in front of you: a stale app would photograph an old window.
-"$REPO_ROOT/scripts/build/make-app.sh" | grep -E "Done|error"
+"$REPO_ROOT/Scripts/build/make-app.sh" | grep -E "Done|error"
 osascript -e 'tell application "Weave" to quit' >/dev/null 2>&1 || true
 
 if [ "${SEED:-1}" != 0 ]; then

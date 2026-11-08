@@ -141,7 +141,7 @@ struct WeaveButtonStyle: ButtonStyle {
 }
 
 /// The mark: the app icon's tile (knitted cloth, a needle, a vermilion thread), rendered by
-/// scripts/art/gen-app-icon.swift into Resources/AppIcon.png.
+/// Scripts/art/gen-app-icon.swift into Resources/AppIcon.png.
 struct WeaveMark: View {
     var size: CGFloat = 22
 

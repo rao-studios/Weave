@@ -98,11 +98,14 @@ enum EndToEnd {
             port.start(port: testPort, requireSecret: true)
             _ = await poll(10) { await MainActor.run { port.state.listening } }
             let secret = try main.readSecret(for: WeaveIdentity.app)
-            let body = LoopbackHTTP.encode(WeaveSearchRequest(query: "loom shuttle \(marker)", topK: 10))
-            let viaPort = try await LoopbackHTTP.json(WeaveSearchResponse.self,
-                                                      LoopbackHTTP.request(port: testPort, path: "/v1/search", body: body, secret: secret, timeout: 90))
-            check(Set(viaPort.hits.filter { $0.text.contains(marker) }.compactMap(\.threadName)) == ["alpha", "beta"],
-                  "Weave's port answers the same, named by instance")
+            let body = Data(#"{"query": "loom shuttle \#(marker)", "top_k": 10, "sewn": {"owner_id": "local-weave", "scope": "global"}}"#.utf8)
+            let (answer, _) = try await LoopbackHTTP.send(LoopbackHTTP.request(port: testPort, path: "/v1/search", body: body, secret: secret, timeout: 90))
+            let object = (try? JSONSerialization.jsonObject(with: answer)) as? [String: Any] ?? [:]
+            let texts = object["texts"] as? [String] ?? []
+            let threadIDs = (object["references"] as? [[String: Any]] ?? []).map { $0["thread_id"] as? String ?? "" }
+            let names = ((object["weave"] as? [String: Any])?["threads"] as? [String: String]) ?? [:]
+            let answeredBy = Set(zip(texts, threadIDs).filter { $0.0.contains(marker) }.compactMap { names[$0.1] })
+            check(answeredBy == ["alpha", "beta"], "Weave's port forwards Sewn's own search to the host; weave.threads names alpha and beta")
 
             step("the Connect page's examples, as another app runs them")
             let examples = RequestExamples.all(thread: "alpha")
@@ -110,13 +113,20 @@ enum EndToEnd {
                 await Shell.run(RequestExamples.code(examples.first { $0.kind == kind }!, format: .curl, port: testPort, requireSecret: true))
             }
             let listed = await curl(.threads)
-            check(listed.contains(#""id":"alpha""#) && listed.contains(#""id":"main""#), "curl: the AIIs to file into, with their ids")
+            check(listed.contains(#""id":"alpha""#) && listed.contains(#""id":"main""#) && listed.contains("key_file"),
+                  "curl: the AIIs a request can route to, with their ids and direct Threads")
             let filed = await curl(.insert)
-            check(filed.contains(#""indexed":true"#), "curl: a record filed into alpha, searchable on return\(filed.contains(#""indexed":true"#) ? "" : "\n    \(filed)")")
+            check(filed.contains(#""indexed":true"#), "curl: Thread's own insert body, routed to alpha, searchable on return\(filed.contains(#""indexed":true"#) ? "" : "\n    \(filed.prefix(400))")")
             let foundOne = await curl(.searchOne)
-            check(foundOne.contains("reads a chain of punched cards"), "curl: searched straight after, alpha returns it\(foundOne.contains("punched cards") ? "" : "\n    \(foundOne.prefix(400))")")
-            check(await curl(.searchAll).contains(#""thread_name":"alpha""#), "curl: the search across every AII names alpha")
-            check(await curl(.records).contains("weave-alpha-notes"), "curl: alpha's records list the new group")
+            check(foundOne.contains("reads a chain of punched cards"), "curl: Thread's own search body, routed to alpha, finds it straight after\(foundOne.contains("reads a chain of punched cards") ? "" : "\n    \(foundOne.prefix(1200))")")
+            let foundAll = await curl(.searchAll)
+            check(foundAll.contains(#""routed_to":"host""#) && foundAll.contains(#""alpha""#), "curl: Sewn's own search body, to the host, names alpha's Thread")
+            check(await curl(.library).contains(#""id":"notes""#), "curl: Thread's own library body lists the new group")
+            check(await curl(.graph).contains("entities"), "curl: Thread's own graph body answers")
+            if let target = try? await LiveGatewaySourceForTests.route(alpha: fabric.state.record("alpha")) {
+                let direct = await Shell.run("curl -s -X POST http://127.0.0.1:\(target.port)/v1/search -H \"X-Ambient-Secret: $(cat '\(target.keyFile)')\" -H 'Content-Type: application/json' -d '\(examples.first { $0.kind == .searchOne }!.own!.json)'")
+                check(direct.contains("reads a chain of punched cards"), "the same body without weave, straight to alpha's Thread, answers the same\(direct.contains("reads a chain") ? "" : "\n    \(direct.prefix(800))")")
+            }
 
             let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("weave-connect-\(marker)", isDirectory: true)
             try? FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
@@ -134,10 +144,10 @@ enum EndToEnd {
                 let calls = [RequestExample.Kind.insert, .searchOne].map { kind in
                     RequestExamples.code(examples.first { $0.kind == kind }!, format: .javascript, port: testPort, requireSecret: true)
                 }
-                try ("import { weave } from \"./weave.mjs\";\n" + calls.joined(separator: "\n"))
+                try ("import { weave } from \"./weave.mjs\";\n" + calls.map { "{\n\($0)\n}" }.joined(separator: "\n"))
                     .write(to: scratch.appendingPathComponent("run.mjs"), atomically: true, encoding: .utf8)
                 let ran = await Shell.run("cd \"\(scratch.path)\" && node run.mjs 2>&1; echo exit=$?")
-                check(ran.contains("true") && ran.contains("punched cards"), "JavaScript: weave() files and finds a record\(ran.contains("punched cards") ? "" : "\n    \(ran.prefix(400))")")
+                check(ran.contains(#""indexed":true"#) && ran.contains("punched cards"), "JavaScript: weave() files and finds a record\(ran.contains(#""indexed":true"#) && ran.contains("punched cards") ? "" : "\n    \(ran.prefix(1200))")")
             }
             port.stop()
 
@@ -208,5 +218,13 @@ enum Shell {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         return String(decoding: data, as: UTF8.self)
+    }
+}
+
+/// The direct form of a request to a spawned AII: its Thread's port and its key file.
+enum LiveGatewaySourceForTests {
+    static func route(alpha record: ThreadRecord?) async throws -> (port: Int, keyFile: String) {
+        guard let record else { throw FabricError.notFound("alpha") }
+        return (record.threadHTTP, PrivateFile.path(record.aiiHome.secretFile(for: WeaveIdentity.app)))
     }
 }

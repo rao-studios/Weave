@@ -131,7 +131,8 @@ import WeaveKitTestSupport
         #expect(threads.threads[0].node?.threadId == "n1" && threads.threads[0].documents == 5 && threads.threads[0].status == "up")
         #expect(threads.threads[0].accepting && !threads.threads[1].accepting)
         #expect(threads.threads[1].node == nil && !threads.threads[1].woven)
-        #expect(threads.threads[2].label == "main AII" && threads.insert.contains("/v1/records"))
+        #expect(threads.threads[2].label == "main AII" && threads.routing.contains("aii"))
+        #expect(threads.threads[0].direct.url == "http://127.0.0.1:47611" && threads.threads[0].direct.keyFile.hasSuffix("alpha/secrets/weave"))
     }
 
     @Test func aReplacedServersLateWriteIsDropped() {

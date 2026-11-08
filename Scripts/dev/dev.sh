@@ -4,10 +4,10 @@
 #       sign-binary.sh signs it with a stable identity instead (Veil's dev.sh).
 # OUT:  exec <bin path>/Weave "$@" in the foreground (Ctrl-C quits it).
 #
-#   ./scripts/dev/dev.sh
-#   CONFIG=release ./scripts/dev/dev.sh
-#   ./scripts/dev/dev.sh --mode=search        # open on a page (fabric, explorer, search, settings)
-#   ./scripts/dev/dev.sh --self-test          # the headless exercise against a scratch AII home, then exit
+#   ./Scripts/dev/dev.sh
+#   CONFIG=release ./Scripts/dev/dev.sh
+#   ./Scripts/dev/dev.sh --mode=search        # open on a page (fabric, explorer, search, settings)
+#   ./Scripts/dev/dev.sh --self-test          # the headless exercise against a scratch AII home, then exit
 #
 set -e
 
@@ -18,5 +18,5 @@ cd "$REPO_ROOT"
 echo "▸ build ($CONFIG)"
 swift build -c "$CONFIG" --product Weave
 BIN="$(swift build -c "$CONFIG" --show-bin-path)/Weave"
-"$REPO_ROOT/scripts/build/sign-binary.sh" "$BIN"
+"$REPO_ROOT/Scripts/build/sign-binary.sh" "$BIN"
 exec "$BIN" "$@"

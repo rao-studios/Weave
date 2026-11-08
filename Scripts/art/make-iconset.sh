@@ -6,7 +6,7 @@
 #       uses Support/AppIcon/AppIcon.icon (compiled by make-app.sh) instead; this
 #       .icns is the CFBundleIconFile fallback.
 #
-#   ./scripts/art/make-iconset.sh Support/AppIcon/icon_1024.png build/AppIcon.iconset
+#   ./Scripts/art/make-iconset.sh Support/AppIcon/icon_1024.png build/AppIcon.iconset
 #
 set -e
 

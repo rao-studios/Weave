@@ -35,6 +35,14 @@ enum ConnectOps {
         return records.first?.name ?? ThreadGateway.mainName
     }
 
+    /// The chosen AII's own Thread: its URL and the file holding the key it wants.
+    static func direct(_ thread: String, records: [ThreadRecord], main: AIIHome = .resolved()) -> (url: String, keyFile: String) {
+        if let record = records.first(where: { $0.name == thread }) {
+            return ("http://127.0.0.1:\(record.threadHTTP)", PrivateFile.path(record.aiiHome.secretFile(for: WeaveIdentity.app)))
+        }
+        return ("http://127.0.0.1:\(AIIConfig.load(home: main).threadPorts.http)", PrivateFile.path(main.secretFile(for: WeaveIdentity.app)))
+    }
+
     /// Sends the example as another app would: to 127.0.0.1, with Weave's key when the port asks for it.
     static func send(_ example: RequestExample, port: Int, requireSecret: Bool) async -> Result {
         let secret = requireSecret ? (try? AIIHome.resolved().readSecret(for: WeaveIdentity.app)) : nil

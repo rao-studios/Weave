@@ -12,6 +12,7 @@ import WeaveKit
 struct ExampleCard: View {
     let example: RequestExample
     let code: String
+    let direct: String?
     let result: ConnectOps.Result?
     let running: Bool
     let copied: Bool
@@ -34,6 +35,12 @@ struct ExampleCard: View {
             }
             Note(example.detail)
             CodeBlock(code: code, maxHeight: 200)
+            if let direct {
+                Label(direct, systemImage: "arrow.turn.down.right")
+                    .font(.weaveSans(11)).foregroundStyle(Color.weaveInk.opacity(0.5))
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if running {
                 HStack(spacing: 8) { ProgressView().controlSize(.small); Text("Asking Weave's port…").font(.weaveSans(11)) }
             } else if let result {

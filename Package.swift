@@ -7,7 +7,7 @@
 //   Weave      the macOS app (Sources/WeaveApp): the shell and settings services, the pages,
 //              the design, and WeaveAppRoot, the façade AppKit calls
 //
-// OUT:  the `Weave` executable (scripts/build/make-app.sh assembles build/Weave.app) and the
+// OUT:  the `Weave` executable (Scripts/build/make-app.sh assembles build/Weave.app) and the
 //       `WeaveKit` library.
 // PIN:  Every dependency is taken by URL, on main, and Package.resolved pins the commit, as Ambient,
 //       Veil and Craft take them. AII comes with `traits: []`: its `Server` trait (Frigate/MLX,
@@ -44,6 +44,10 @@ let package = Package(
         .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.0.0"),
         // Already in the graph through AII and Hummingbird; named so the port's logger can be quieted.
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
+        // Also already in the graph: the forwarder passes bodies through as bytes (NIOCore,
+        // NIOFoundationCompat) and answers with the AII's own status and content type (HTTPTypes).
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
+        .package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.0"),
     ],
     targets: [
         .target(
@@ -53,6 +57,9 @@ let package = Package(
                 .product(name: "Granite", package: "Granite"),
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "Logging", package: "swift-log"),
+                .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "NIOFoundationCompat", package: "swift-nio"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
             ],
             swiftSettings: v5
         ),
