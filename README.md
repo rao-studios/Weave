@@ -62,6 +62,7 @@ swift test                        # Ops, seeding on scratch AII homes, the port,
 ./Scripts/dev/dev.sh              # build, stable-sign and run
 ./Scripts/dev/dev.sh --self-test  # headless: a scratch AII home, a spawn, the port; exits 0/1
 ./Scripts/build/make-app.sh       # build/Weave.app, icon compiled, signed
+./Scripts/release/release.sh      # the next version: a notarized .pkg, a tag, a GitHub release
 ```
 
 `Weave --e2e <folder>` runs the whole fabric against this Mac's real AII, then removes what it made. It spawns two AIIs, deposits into each, searches through the main AII and through Weave's port, makes one AII the host, and searches again.
@@ -185,6 +186,7 @@ The relays point down only: Search → Host → Fabric, Port → Host and Fabric
 | --- | --- |
 | `Scripts/dev/dev.sh` | Build, stable-sign and run |
 | `Scripts/build/make-app.sh [--install]` | Assemble, stamp and sign `build/Weave.app` |
+| `Scripts/release/release.sh [--minor\|--major\|N.N.N]` | Release the next version (0.0.0 first): a Developer ID `.pkg`, notarized and stapled, tagged `vN.N.N` and attached to a GitHub release. `SKIP_NOTARIZE=1` stops at the signed `.pkg` |
 | `Scripts/art/gen-app-icon.swift` | Render the app icon (knitted cloth, a needle, a vermilion thread) from its SVG |
 | `Scripts/art/readme-shots.sh` | Rebuild the README's screenshots from a demo fabric |
 | `Docs/README_Assets/src/build.sh` | Rebuild this README's hero |

@@ -63,6 +63,10 @@ fastlane/test_output
 
 ## Weave
 /build/
+/pkg/
+# Release packages, their manifests and notes (Scripts/release/release.sh builds them in build/;
+# the .pkg is attached to the GitHub release, never committed)
+*.pkg
 .build/
 .swiftpm/configuration/
 .vscode/

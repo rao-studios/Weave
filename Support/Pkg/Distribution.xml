@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The installer's rules: Apple silicon (the app is an arm64 build, and the AII it runs needs MLX)
+     and macOS 26 (the app's floor; release.sh holds it to Support/Info.plist). One choice,
+     installed to /Applications. After Adverb's. -->
+<installer-gui-script minSpecVersion="2">
+    <title>Weave</title>
+    <options customize="never" require-scripts="false" hostArchitectures="arm64"/>
+    <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="26.0"/>
+        </allowed-os-versions>
+    </volume-check>
+    <choices-outline>
+        <line choice="default">
+            <line choice="nyc.rao.weave.pkg"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="nyc.rao.weave.pkg" visible="false">
+        <pkg-ref id="nyc.rao.weave.pkg"/>
+    </choice>
+    <pkg-ref id="nyc.rao.weave.pkg">Weave-component.pkg</pkg-ref>
+</installer-gui-script>
