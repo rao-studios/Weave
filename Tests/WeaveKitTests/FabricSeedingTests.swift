@@ -91,6 +91,48 @@ import WeaveKitTestSupport
         }
     }
 
+    @Test func aNameIsLowercaseLettersDigitsAndSingleHyphens() {
+        for good in ["ab", "a1", "apple", "apple-reasoning", "swift-on-server-2", String(repeating: "a", count: 32)] {
+            #expect(ThreadRecord.isValidName(good), "\(good) is a valid name")
+        }
+        for bad in ["", "a", "1a", "-apple", "apple-", "apple--x", "Bad-Name", "apple_x", "apple.x", "apple x", "äpple",
+                    String(repeating: "a", count: 33), "main", "models", "aii"] {
+            #expect(!ThreadRecord.isValidName(bad), "\(bad) is not a valid name")
+        }
+    }
+
+    @Test func aHyphenatedNameSpawnsLikeAnyOtherOnBothKindsOfVolume() throws {
+        let scratch = Scratch(); defer { scratch.clean() }
+        try FabricSeeding.prepareMain(scratch.main)
+        try FabricRoot.ensure(root: scratch.root, main: scratch.main)
+        var state = FabricService.Center.State()
+        state.root = scratch.root.path
+        let record = try FabricOps.spawn(name: "apple-reasoning", graphBackend: "keyword", woven: true, softCap: 8, state: state,
+                                         main: scratch.main, listening: { _ in false })
+        let folder = scratch.root.appendingPathComponent("apple-reasoning", isDirectory: true)
+        #expect(record.name == "apple-reasoning" && record.home == folder.path)
+        #expect(ThreadRecord.load(home: folder) == record)
+        #expect(FabricRoot.records(root: scratch.root).map(\.name) == ["apple-reasoning"])
+
+        // On a drive without hard links, the kept home's folder name carries the hyphen and is never parsed back.
+        let kept = scratch.url.appendingPathComponent("Homes", isDirectory: true)
+        state.threads = [record]
+        let apart = try FabricOps.spawn(name: "apple-reasoning-2", graphBackend: "keyword", woven: true, softCap: 8, state: state,
+                                        main: scratch.main, listening: { _ in false }, kept: kept, hardLinks: { _ in false })
+        let home = try #require(apart.aiiHomePath)
+        #expect(FabricRoot.isKeptHome(home, in: kept) && URL(fileURLWithPath: home).lastPathComponent.hasPrefix("apple-reasoning-2-"))
+        #expect(Set(FabricRoot.records(root: scratch.root).map(\.name)) == ["apple-reasoning", "apple-reasoning-2"])
+        try FabricRoot.remove(apart, kept: kept)
+        #expect(!FileManager.default.fileExists(atPath: home))
+
+        for reserved in ["main", "models", "aii", "apple--x"] {
+            #expect(throws: FabricError.invalidName(reserved)) {
+                try FabricOps.spawn(name: reserved, graphBackend: "keyword", woven: true, softCap: 8, state: state,
+                                    main: scratch.main, listening: { _ in false })
+            }
+        }
+    }
+
     @Test func weaveLeavesASecretAndALaneInTheMainHomeAndNoFolder() throws {
         let scratch = Scratch(); defer { scratch.clean() }
         try FabricSeeding.prepareMain(scratch.main)

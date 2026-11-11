@@ -31,7 +31,7 @@ struct SpawnSheet: View {
             VStack(alignment: .leading, spacing: 6) {
                 SectionCaption("Name")
                 TextField("alpha", text: $name).textFieldStyle(.roundedBorder).font(.weaveMono(13)).onSubmit(submit)
-                Text(valid || name.isEmpty ? "Lowercase letters and digits, starting with a letter." : "Lowercase letters and digits, starting with a letter, 2–32 long.")
+                Text(valid || name.isEmpty ? "Lowercase letters, digits and single hyphens, starting with a letter." : "Lowercase letters, digits and single hyphens, starting with a letter, 2–32 long, and not main, models or aii.")
                     .font(.weaveSans(10.5)).foregroundStyle(valid || name.isEmpty ? Color.weaveInk.opacity(0.45) : Color.weaveError)
             }
             VStack(alignment: .leading, spacing: 6) {

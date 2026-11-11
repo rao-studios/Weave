@@ -63,8 +63,27 @@ public struct ThreadRecord: Codable, Sendable, Equatable, Identifiable, Hashable
         return (folder.appendingPathComponent("thread", isDirectory: true), folder.appendingPathComponent("sewn", isDirectory: true))
     }
 
-    /// A lowercase handle, the same rule as an AII app name: `^[a-z][a-z0-9]{1,31}$`.
-    public static func isValidName(_ name: String) -> Bool { AIIApp.isValidName(name) }
+    /// Names an AII may not take: the main AII, the fabric's shared `models` folder, and `aii`.
+    public static let reservedNames: Set<String> = [ThreadGateway.mainName, "models", "aii"]
+
+    /// A lowercase handle 2–32 long: letters, digits and single hyphens, starting with a letter and
+    /// not ending in a hyphen (`apple`, `apple-reasoning`). The name is a folder, a routing id and the
+    /// tail of the deposit group `weave-<name>`, where AII allows hyphens; it is never an AII app name,
+    /// so AII's stricter app-name rule does not apply.
+    public static func isValidName(_ name: String) -> Bool {
+        let bytes = Array(name.utf8)
+        let hyphen = UInt8(ascii: "-")
+        guard (2...32).contains(bytes.count), let first = bytes.first, (UInt8(ascii: "a")...UInt8(ascii: "z")).contains(first),
+              bytes.last != hyphen else { return false }
+        var previous: UInt8 = 0
+        for byte in bytes {
+            let letter = (UInt8(ascii: "a")...UInt8(ascii: "z")).contains(byte)
+            let digit = (UInt8(ascii: "0")...UInt8(ascii: "9")).contains(byte)
+            guard letter || digit || byte == hyphen, !(byte == hyphen && previous == hyphen) else { return false }
+            previous = byte
+        }
+        return !reservedNames.contains(name)
+    }
 
     public static func url(in home: URL) -> URL { home.appendingPathComponent(fileName) }
 

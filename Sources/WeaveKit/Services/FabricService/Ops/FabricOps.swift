@@ -151,7 +151,7 @@ public enum FabricOps {
     public static func spawn(name: String, graphBackend: String, woven: Bool, softCap: Int, state: State,
                              main: AIIHome = .resolved(), listening: (Int) -> Bool = WeavePortPlan.isListening,
                              kept: URL = FabricRoot.keptHomes, hardLinks: (URL) -> Bool = FabricRoot.supportsHardLinks) throws -> ThreadRecord {
-        guard ThreadRecord.isValidName(name), name != ThreadGateway.mainName else { throw FabricError.invalidName(name) }
+        guard ThreadRecord.isValidName(name) else { throw FabricError.invalidName(name) }
         guard state.record(name) == nil else { throw FabricError.exists(name) }
         guard state.threads.count < max(1, softCap) else { throw FabricError.softCap(softCap) }
         let root = FabricRoot.url(state.root.isEmpty ? FabricRoot.defaultPath : state.root)

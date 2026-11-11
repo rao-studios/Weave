@@ -168,6 +168,8 @@ import WeaveKitTestSupport
     @Test func depositsGoToTheThreadsOwnGroup() {
         #expect(ExplorerOps.depositGroup(.spawned("alpha")).id == "weave-alpha")
         #expect(ExplorerOps.depositGroup(.main).id == "weave-main")
+        // A hyphenated AII keeps a group AII reads as app `weave`, group `apple-reasoning`.
+        #expect(ExplorerOps.depositGroup(.spawned("apple-reasoning")).id == "weave-apple-reasoning")
     }
 
     @Test func theLogTailKeepsTheLastLines() throws {

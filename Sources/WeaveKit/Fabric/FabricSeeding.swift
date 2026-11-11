@@ -44,7 +44,7 @@ public enum FabricError: Error, Equatable, LocalizedError {
         case .laneMismatch(let name): return "\(name)'s lane for Weave does not match the main AII's."
         case .notWritable(let path): return "Weave cannot write to \(path)."
         case .unavailable(let path): return "The custom location \(path) is not there. Is its drive connected? Turn Custom location off in Settings to use Weave's own folder."
-        case .invalidName(let name): return "“\(name)” is not a valid name: lowercase letters and digits, starting with a letter, 2–32 long."
+        case .invalidName(let name): return "“\(name)” is not a valid name: lowercase letters, digits and single hyphens, starting with a letter, 2–32 long, and not main, models or aii."
         case .exists(let name): return "An AII named \(name) already exists."
         case .noFreeSlot: return "Every port slot Weave plans is in use."
         case .softCap(let n): return "Weave runs at most \(n) AIIs (Settings › Soft cap)."
