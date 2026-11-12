@@ -158,8 +158,8 @@ def hero(browser):
 html, body {{ margin: 0; width: 1200px; height: 630px; overflow: hidden; }}
 body {{ position: relative; font-family: "Playfair", Georgia, serif; font-style: italic; font-variant-numeric: lining-nums;
        background: radial-gradient(ellipse 90% 100% at 22% 20%, #20201c 0%, #191917 45%, #121211 100%); }}
-.mark {{ position: absolute; left: 57.5px; top: 52px; width: 72px; }}
-.caption {{ position: absolute; left: 143.5px; top: 72px; letter-spacing: .3em; font-size: 16.5px; color: #8b8a84; }}
+.mark {{ position: absolute; left: 64.6px; top: 62.6px; width: 51.9px; }}
+.caption {{ position: absolute; left: 138.8px; top: 72px; letter-spacing: .3em; font-size: 16.5px; color: #8b8a84; }}
 .title {{ position: absolute; left: 34px; top: 112px; padding-left: 40px; font-size: 220px; line-height: 1; font-weight: 500; letter-spacing: -.005em;
          background: linear-gradient(100deg, #8d9097 0%, #c8cad0 35%, #f2f3f6 58%, #b6b9c1 100%);
          -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: 30px; }}
@@ -218,8 +218,8 @@ PLATE_CSS = f"""
 html, body {{{{ margin: 0; width: {W}px; overflow: hidden; }}}}
 body {{{{ position: relative; font-family: "Playfair", Georgia, serif; font-style: italic; color: #a29f97; font-variant-numeric: lining-nums;
        background: radial-gradient(ellipse 90% 100% at 22% 20%, #20201c 0%, #191917 45%, #121211 100%); }}}}
-.mark {{{{ position: absolute; left: 62.5px; top: 60px; width: 64px; }}}}
-.caption {{{{ position: absolute; left: 150px; top: 78px; letter-spacing: .3em; font-size: 15px; color: #8b8a84; }}}}
+.mark {{{{ position: absolute; left: 68.8px; top: 69.3px; width: 46.2px; }}}}
+.caption {{{{ position: absolute; left: 145.8px; top: 78px; letter-spacing: .3em; font-size: 15px; color: #8b8a84; }}}}
 .title {{{{ position: absolute; left: 30px; padding-left: 40px; top: 150px; font-size: 104px; line-height: 1; font-weight: 500; padding-right: 30px; padding-bottom: 20px;
          background: linear-gradient(100deg, #8d9097 0%, #c8cad0 35%, #f2f3f6 58%, #b6b9c1 100%);
          -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }}}}
