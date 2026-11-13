@@ -2,9 +2,10 @@
 //  ThreadRow.swift
 //  Weave
 //
-//  One spawned AII as a card in the Fabric's grid: its node mark and name, its state, its Thread's
-//  ports, its counts in Weave's lane, its models, and its controls. Every block is a Grid, so the
-//  labels, the numbers and the buttons line up from card to card.
+//  One spawned AII, as a card in the Fabric's grid or a row in its list: its node mark and name, its
+//  state, its Thread's ports, its counts in Weave's lane, its models, and its controls. Every block
+//  is a Grid, so the labels, the numbers and the buttons line up from card to card; in the list the
+//  mark leads each row and the counts keep one width, so they line up from row to row.
 //
 
 import Granite
@@ -19,6 +20,9 @@ struct ThreadRowAction: Sendable, Equatable {
 }
 
 struct ThreadRow: View {
+    /// A card in the grid, or a row in the list.
+    enum Style { case card, row }
+
     let record: ThreadRecord
     let status: ThreadStatus
     let embedder: ThreadEmbedderState?
@@ -29,17 +33,18 @@ struct ThreadRow: View {
     let busy: Bool
     let needsReseed: Bool
     let registered: Bool
+    var style: Style = .card
     @Environment(\.graniteBubble) private var bubble
 
+    /// The counts' width in a list row: one width for every row, so the numbers line up.
+    static let rowMetricsWidth: CGFloat = 300
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            header
-            Divider().overlay(Color.weaveBorder)
-            details
-            metrics
-            notes
-            Spacer(minLength: 0)
-            controls
+        Group {
+            switch style {
+            case .card: card
+            case .row: row
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -47,26 +52,71 @@ struct ThreadRow: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(isHost ? Color.weaveAccent.opacity(0.45) : Color.weaveBorder, lineWidth: 1))
     }
 
+    // MARK: - Arrangements
+
+    private var card: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
+                mark
+                identity
+                Spacer(minLength: 0)
+                spinner
+                menu
+            }
+            Divider().overlay(Color.weaveBorder)
+            details
+            metrics
+            notes
+            Spacer(minLength: 0)
+            controls(spread: true)
+        }
+    }
+
+    /// The mark leads; the name and the controls share the first line, the details and the counts the second.
+    private var row: some View {
+        HStack(alignment: .top, spacing: 14) {
+            mark
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .center, spacing: 12) {
+                    identity
+                    Spacer(minLength: 12)
+                    spinner
+                    controls(spread: false)
+                    menu
+                }
+                Divider().overlay(Color.weaveBorder)
+                HStack(alignment: .center, spacing: 18) {
+                    details
+                    Spacer(minLength: 12)
+                    metrics.frame(width: Self.rowMetricsWidth)
+                }
+                notes
+            }
+        }
+    }
+
     // MARK: - Blocks
 
-    private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            NodeMark(status: status, isHost: isHost, woven: record.woven)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(record.name).font(.weaveSerif(19, weight: .medium, italic: true)).foregroundStyle(Color.weaveInk)
-                    if isHost { Pill(text: "host", tint: .weaveAccent) }
-                }
-                HStack(spacing: 6) {
-                    StatusDot(state: StatusDot.State(status), size: 6)
-                    Text(verbatim: status.label + (status.detail.map { " · \($0)" } ?? ""))
-                        .font(.weaveMono(10.5)).foregroundStyle(Color.weaveInk.opacity(0.55)).lineLimit(1)
-                }
+    private var mark: some View {
+        NodeMark(status: status, isHost: isHost, woven: record.woven)
+    }
+
+    private var identity: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 6) {
+                Text(record.name).font(.weaveSerif(19, weight: .medium, italic: true)).foregroundStyle(Color.weaveInk)
+                if isHost { Pill(text: "host", tint: .weaveAccent) }
             }
-            Spacer(minLength: 0)
-            if busy { ProgressView().controlSize(.small) }
-            menu
+            HStack(spacing: 6) {
+                StatusDot(state: StatusDot.State(status), size: 6)
+                Text(verbatim: status.label + (status.detail.map { " · \($0)" } ?? ""))
+                    .font(.weaveMono(10.5)).foregroundStyle(Color.weaveInk.opacity(0.55)).lineLimit(1)
+            }
         }
+    }
+
+    @ViewBuilder private var spinner: some View {
+        if busy { ProgressView().controlSize(.small) }
     }
 
     private var details: some View {
@@ -114,7 +164,8 @@ struct ThreadRow: View {
         }
     }
 
-    private var controls: some View {
+    /// `spread`: Explore at the far edge (a card); else after the rest (a row, where a spacer leads).
+    private func controls(spread: Bool) -> some View {
         HStack(spacing: 6) {
             if status.isRunning {
                 Button("Stop") { send(.stop) }.buttonStyle(WeaveButtonStyle())
@@ -123,7 +174,7 @@ struct ThreadRow: View {
                 Button("Start") { send(.start) }.buttonStyle(WeaveButtonStyle(prominent: true))
             }
             Button(record.woven ? "Weave out" : "Weave in") { send(record.woven ? .weaveOut : .weaveIn) }.buttonStyle(WeaveButtonStyle())
-            Spacer(minLength: 0)
+            if spread { Spacer(minLength: 0) }
             Button { send(.explore) } label: { Label("Explore", systemImage: "arrow.right") .labelStyle(.titleAndIcon) }
                 .buttonStyle(WeaveButtonStyle(prominent: status.isRunning))
         }

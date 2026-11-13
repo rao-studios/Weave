@@ -26,6 +26,7 @@ enum SettingsOps {
         state.port = min(max(state.port, 1024), 65535)
         state.softCap = min(max(state.softCap, 1), 39)
         state.searchTopK = min(max(state.searchTopK, 1), 50)
+        state.fabricGrid = state.fabricGrid.clamped()
         if state.defaultGraphBackend != "keyword" { state.defaultGraphBackend = "mlx" }
         state.customLocation = state.customLocation.trimmingCharacters(in: .whitespacesAndNewlines)
         if state.customLocation.isEmpty { state.useCustomLocation = false }

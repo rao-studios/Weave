@@ -79,3 +79,54 @@ import WeaveKit
         #expect(kinds.count == 1 && state.mode == .search)
     }
 }
+
+@Suite struct FabricLayoutTests {
+    typealias State = SettingsService.Center.State
+
+    @Test func theDefaultIsATwoByTwoGrid() {
+        let state = State()
+        #expect(state.fabricLayout == .grid && state.fabricGrid == FabricGridSize(columns: 2, rows: 2))
+        #expect(FabricGridSize.presets.contains(.standard) && FabricGridSize.standard.perPage == 4)
+    }
+
+    @Test func theLayoutIsKeptAndAnOlderFileGetsTheDefault() throws {
+        var state = State()
+        SettingsOps.apply(.write { $0.fabricLayout = .list; $0.fabricGrid = FabricGridSize(columns: 3, rows: 2) }, to: &state)
+        let restored = try JSONDecoder().decode(State.self, from: JSONEncoder().encode(state))
+        #expect(restored.fabricLayout == .list && restored.fabricGrid == FabricGridSize(columns: 3, rows: 2))
+        let older = try JSONDecoder().decode(State.self, from: Data(#"{"port": 47700}"#.utf8))
+        #expect(older.fabricLayout == .grid && older.fabricGrid == .standard && older.port == 47700)
+        let unknown = try JSONDecoder().decode(State.self, from: Data(#"{"fabricLayout": "mosaic", "searchTopK": 20}"#.utf8))
+        #expect(unknown.fabricLayout == .grid && unknown.searchTopK == 20, "an unknown layout is the default, the rest kept")
+    }
+
+    @Test func theGridIsClampedToItsRange() {
+        var state = State()
+        SettingsOps.apply(.write { $0.fabricGrid = FabricGridSize(columns: 0, rows: 40) }, to: &state)
+        #expect(state.fabricGrid == FabricGridSize(columns: 1, rows: 4))
+    }
+
+    @Test func pagesHoldAGridEachInOrder() {
+        let pages = FabricGridMetrics.chunk(Array(1...7), FabricGridSize.standard.perPage)
+        #expect(pages == [[1, 2, 3, 4], [5, 6, 7]])
+        #expect(FabricGridMetrics.chunk(pages[1], 2) == [[5, 6], [7]], "a page's rows, the last one short")
+        #expect(FabricGridMetrics.chunk([Int](), 4).isEmpty)
+    }
+
+    @Test func columnsShareAWideViewAndKeepTheirWidthInANarrowOne() {
+        let wide = FabricGridMetrics(viewport: 902, columns: 2)
+        #expect(wide.cell == 444 && wide.pageFits && wide.page == 902)
+        #expect(wide.stops(pages: 2) == [0, 902 + FabricGridMetrics.pageGap], "a page that fits rests at its edge")
+
+        let narrow = FabricGridMetrics(viewport: 902, columns: 3)
+        #expect(narrow.cell == FabricGridMetrics.minCellWidth, "a card never squeezes below its readable width")
+        #expect(!narrow.pageFits && narrow.page == 3 * 340 + 2 * 14)
+        let stride = narrow.page + FabricGridMetrics.pageGap
+        #expect(narrow.stops(pages: 2) == [0, 354, 708, stride, stride + 354, stride + 708], "else at each column's edge")
+    }
+
+    @Test func thePageWidensForMoreColumns() {
+        #expect(FabricGridMetrics.contentWidth(columns: 2) + 2 * WeaveMetrics.pagePadding < Fabric.maxPageWidth)
+        #expect(FabricGridMetrics.contentWidth(columns: 4) == CGFloat(4 * 460 + 3 * 14))
+    }
+}
