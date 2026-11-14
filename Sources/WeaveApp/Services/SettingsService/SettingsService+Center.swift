@@ -28,7 +28,7 @@ extension SettingsService {
             var defaultGraphBackend: String = "mlx"
             var softCap: Int = FabricService.defaultSoftCap
             var searchTopK: Int = 10
-            /// The Fabric page: a grid of cards (the default, 2 × 2 to a page) or a list.
+            /// The Fabric page: a grid of cards (the default, 2 × 3 to a page) or a list.
             var fabricLayout: FabricLayout = .grid
             var fabricGrid: FabricGridSize = .standard
             init() {}
@@ -41,7 +41,9 @@ extension SettingsService {
             private enum CodingKeys: String, CodingKey {
                 case useCustomLocation, customLocation, healthInterval, hostPollInterval, portEnabled, port
                 case requireSecretOnPort, stopThreadsOnQuit, defaultGraphBackend, softCap, searchTopK
-                case fabricLayout, fabricGrid
+                case fabricLayout
+                /// 0.0.2 kept its 2 × 2 default under `fabricGrid`: a new key, so the 2 × 3 default reaches those files.
+                case fabricGrid = "fabricGridSize"
             }
 
             /// Before the toggle, one `rootFolder` field held the folder in use.

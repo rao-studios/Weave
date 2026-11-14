@@ -89,7 +89,8 @@ struct FabricGrid<Cell: View>: View {
     }
 
     /// One page: a Grid, so the cards in a row share the tallest one's height. A short last page
-    /// keeps the full width, so every page can rest at the leading edge.
+    /// keeps the full width, so every page can rest at the leading edge. The page takes its own
+    /// height: beside a taller page its cards keep their fitted height instead of stretching.
     private func pageView(_ items: [ThreadRecord]) -> some View {
         let columns = size.columns
         return Grid(alignment: .topLeading, horizontalSpacing: FabricGridMetrics.spacing, verticalSpacing: FabricGridMetrics.spacing) {
@@ -108,6 +109,7 @@ struct FabricGrid<Cell: View>: View {
         .containerRelativeFrame(.horizontal, alignment: .topLeading) { length, _ in
             FabricGridMetrics(viewport: length, columns: columns).page
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 

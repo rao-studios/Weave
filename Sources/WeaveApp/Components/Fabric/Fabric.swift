@@ -3,7 +3,7 @@
 //  Weave
 //
 //  The fabric page: the host and the AIIs Weave spawned, each with its ports, its Thread's state,
-//  its counts, and whether it is woven into the host; as a grid of cards a page at a time (2 × 2 by
+//  its counts, and whether it is woven into the host; as a grid of cards a page at a time (2 × 3 by
 //  default) or as a list. The layout and the grid's size are settings, so they are kept.
 //
 

@@ -18,11 +18,12 @@ struct FabricGridSize: Codable, Hashable, Sendable {
     var columns: Int
     var rows: Int
 
-    static let standard = FabricGridSize(columns: 2, rows: 2)
+    /// Six to a page: two columns fit the default window, and the page scrolls down to the third row.
+    static let standard = FabricGridSize(columns: 2, rows: 3)
 
     /// The sizes the page offers.
     static let presets: [FabricGridSize] = [
-        FabricGridSize(columns: 2, rows: 1), .standard, FabricGridSize(columns: 3, rows: 2),
+        FabricGridSize(columns: 2, rows: 1), FabricGridSize(columns: 2, rows: 2), .standard, FabricGridSize(columns: 3, rows: 2),
         FabricGridSize(columns: 4, rows: 2), FabricGridSize(columns: 3, rows: 3), FabricGridSize(columns: 4, rows: 3),
     ]
 

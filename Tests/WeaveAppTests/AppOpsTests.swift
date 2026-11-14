@@ -83,10 +83,12 @@ import WeaveKit
 @Suite struct FabricLayoutTests {
     typealias State = SettingsService.Center.State
 
-    @Test func theDefaultIsATwoByTwoGrid() {
+    @Test func theDefaultIsSixToAPage() {
         let state = State()
-        #expect(state.fabricLayout == .grid && state.fabricGrid == FabricGridSize(columns: 2, rows: 2))
-        #expect(FabricGridSize.presets.contains(.standard) && FabricGridSize.standard.perPage == 4)
+        #expect(state.fabricLayout == .grid && state.fabricGrid == FabricGridSize(columns: 2, rows: 3))
+        #expect(FabricGridSize.presets.contains(.standard) && FabricGridSize.standard.perPage == 6)
+        let earlier = try? JSONDecoder().decode(State.self, from: Data(#"{"fabricGrid": {"columns": 2, "rows": 2}}"#.utf8))
+        #expect(earlier?.fabricGrid == .standard, "0.0.2's stored 2 × 2 gives way to the new default")
     }
 
     @Test func theLayoutIsKeptAndAnOlderFileGetsTheDefault() throws {
@@ -107,7 +109,7 @@ import WeaveKit
     }
 
     @Test func pagesHoldAGridEachInOrder() {
-        let pages = FabricGridMetrics.chunk(Array(1...7), FabricGridSize.standard.perPage)
+        let pages = FabricGridMetrics.chunk(Array(1...7), 4)
         #expect(pages == [[1, 2, 3, 4], [5, 6, 7]])
         #expect(FabricGridMetrics.chunk(pages[1], 2) == [[5, 6], [7]], "a page's rows, the last one short")
         #expect(FabricGridMetrics.chunk([Int](), 4).isEmpty)
