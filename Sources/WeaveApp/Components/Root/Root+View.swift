@@ -50,10 +50,8 @@ extension Root {
             guard settings.isLoaded else { return }
             WeaveAppRoot.shared.start()
         }
-        .alert(shell.state.error?.title ?? "Error", isPresented: errorPresented, presenting: shell.state.error) { _ in
-            Button("OK") { shell.set(.error(nil)) }
-        } message: { e in
-            Text(e.message)
+        .sheet(item: Binding(get: { shell.state.error }, set: { if $0 == nil { shell.set(.error(nil)) } })) { error in
+            ErrorSheet(error: error) { shell.set(.error(nil)) }
         }
         .alert("Remove \(shell.state.pendingRemove ?? "")?", isPresented: removePresented, presenting: shell.state.pendingRemove) { name in
             Button("Remove", role: .destructive) { WeaveAppRoot.shared.remove(name) }
@@ -82,10 +80,6 @@ extension Root {
                     On(.spawnSheetCancel) { shell.set(.spawnSheet(false)) }
                 }
         }
-    }
-
-    private var errorPresented: Binding<Bool> {
-        Binding(get: { shell.state.error != nil }, set: { if !$0 { shell.set(.error(nil)) } })
     }
 
     private var storageTitle: String {

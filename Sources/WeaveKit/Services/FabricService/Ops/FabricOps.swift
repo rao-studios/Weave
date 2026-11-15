@@ -193,7 +193,7 @@ public enum FabricOps {
         try FabricSeeding.shareModels(home: home, root: record.fabricRoot)
         let spec = ThreadLauncher.threadSpec(record, mothership: mothership, executable: binary)
         let server = try ThreadLauncher.server(spec, home: home)
-        let handle = try await server.ensureRunning(timeout: 120)
+        let handle = try await server.ensureRunning(timeout: startWindow)
         FabricService.servers.put(record.name, server)
         let registered = record.woven ? mothership?.grpc : nil
         // Adopted: the sidecar says what it runs with; launched now: this call's shape.
@@ -204,14 +204,40 @@ public enum FabricOps {
         return (handle, shape)
     }
 
+    /// How long a Thread has to answer `/health` after launch. A large index loads its registry
+    /// before it listens (21k documents on an external disk take about two minutes), so the window
+    /// is generous; a Thread that exits during start-up still fails at once.
+    static let startWindow: TimeInterval = 600
+
+    /// How long a Thread has to flush and exit on SIGTERM before it is killed.
+    static let stopGrace: TimeInterval = 15
+
+    /// How long `stop` waits for the Thread's ports to be let go after it is gone.
+    static let portsWindow: TimeInterval = 10
+
+    /// Stops the record's Thread and returns once its ports are free, so a start that follows
+    /// (a restart) does not race the old process for them ("Address already in use").
     public static func stop(_ record: ThreadRecord) async {
         let home = record.aiiHome
         if let server = FabricService.servers.remove(record.name) {
-            await server.stop(grace: 3)
+            await server.stop(grace: stopGrace)
         } else {
-            await Task.detached { ManagedServer.stopRecordedSync(home.threadRunRecord, grace: 3) }.value
+            await Task.detached { ManagedServer.stopRecordedSync(home.threadRunRecord, grace: stopGrace) }.value
         }
+        await waitForPorts(of: record)
         LaunchShape.remove(home: home)
+    }
+
+    /// Waits until nothing listens on the record's HTTP or gRPC port, up to `portsWindow`.
+    static func waitForPorts(of record: ThreadRecord, window: TimeInterval = portsWindow) async {
+        let deadline = Date().addingTimeInterval(window)
+        while Date() < deadline {
+            let held = await Task.detached {
+                [record.threadHTTP, record.threadGRPC].contains { !ProcessProbe.listeningPIDs(port: $0).isEmpty }
+            }.value
+            if !held { return }
+            try? await Task.sleep(for: .milliseconds(250))
+        }
     }
 
     /// Whether a running Thread must restart to register with `mothership` (or to stop registering).
