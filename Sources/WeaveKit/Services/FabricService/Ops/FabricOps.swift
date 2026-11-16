@@ -205,9 +205,10 @@ public enum FabricOps {
     }
 
     /// How long a Thread has to answer `/health` after launch. A large index loads its registry
-    /// before it listens (21k documents on an external disk take about two minutes), so the window
-    /// is generous; a Thread that exits during start-up still fails at once.
-    static let startWindow: TimeInterval = 600
+    /// before it answers, reading every document's file, and on an exFAT disk that time grows faster
+    /// than the index (21k documents took two minutes, 57k more than ten), so the window is an hour;
+    /// a Thread that exits during start-up still fails at once.
+    static let startWindow: TimeInterval = 3600
 
     /// How long a Thread has to flush and exit on SIGTERM before it is killed.
     static let stopGrace: TimeInterval = 15
