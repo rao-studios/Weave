@@ -5,9 +5,13 @@
 //  WHAT: The fabric: the AII homes Weave spawned under its folder and their `AIIServer thread`
 //        processes. Scan reads the folder and adopts what runs; Spawn seeds and provisions a home
 //        (FabricSeeding) on a free port slot; Start/Stop/Restart run its Thread through AII's
-//        ManagedServer; Weave flips whether it registers with the host; Remove deletes the home;
-//        Watch probes every Thread's /health and counts on a loop.
-//  OUT:  `state.threads`, each one's status, embedder and counts, and the launch shape it runs with.
+//        ManagedServer; Weave flips whether it registers with the host; Label names its AII (the
+//        label lives in the AII's home, and the AII says it); Remove deletes the home; Watch probes
+//        every Thread's /health and counts on a loop.
+//  OUT:  `state.threads`, each one's status, embedder, counts and label, and the launch shape it runs with.
+//  PIN:  THE AII'S LABEL IS WHAT IT IS CALLED. Weave shows it (`title(of:)`) and writes its own name
+//        into a home only when the home has none (spawn, scan); `name` stays the handle for folders,
+//        routes and deposit groups.
 //  PIN:  A leaf: no reducer here holds a relay. The host's mothership ports arrive in payloads, so
 //        HostService (above) can restart Threads here without this service ever reading it.
 //  PIN:  One verb per instance at a time: `reduce` adopts the request's ticket into `busy` only when
@@ -82,6 +86,11 @@ extension FabricService {
     /// Weaves `name` in (registers with `mothership`) or out (standalone); a running Thread restarts.
     public func weave(_ name: String, woven: Bool, mothership: AIIPorts?) async throws {
         _ = try await ticketed { $0.center.weave.send(Weave.Meta(ticket: $1, name: name, woven: woven, mothership: mothership)) }
+    }
+
+    /// Gives `name`'s AII the label `text`: the name the AII says on /health and Weave shows.
+    public func label(_ name: String, as text: String) async throws {
+        _ = try await ticketed { $0.center.label.send(Label.Meta(ticket: $1, name: name, label: text)) }
     }
 
     /// Stops `name` and deletes its home.

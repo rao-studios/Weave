@@ -13,6 +13,7 @@ import WeaveKit
 struct HostPicker: View {
     let state: HostService.Center.State
     let records: [ThreadRecord]
+    var labels: [String: String] = [:]
     @Environment(\.graniteBubble) private var bubble
 
     var body: some View {
@@ -25,7 +26,7 @@ struct HostPicker: View {
             HStack(spacing: 12) {
                 Picker("Host", selection: Binding(get: { state.selection }, set: { choose($0) })) {
                     Text("main AII (~/.rao)").tag(HostSelection.main)
-                    ForEach(records) { record in Text(record.name).tag(HostSelection.spawned(record.name)) }
+                    ForEach(records) { record in Text(labels[record.name] ?? record.name).tag(HostSelection.spawned(record.name)) }
                 }
                 .labelsHidden()
                 .fixedSize()
@@ -44,7 +45,7 @@ struct HostPicker: View {
                 HStack(spacing: 6) {
                     Text("Nodes").font(.weaveSans(11)).foregroundStyle(Color.weaveInk.opacity(0.5))
                     ForEach(state.nodes.filter(\.isActive)) { node in
-                        Pill(text: (HostOps.name(of: node, records: records, mainThreadHTTP: SearchOps.mainThreadHTTP()) ?? node.app ?? "?")
+                        Pill(text: (HostOps.name(of: node, records: records, mainThreadHTTP: SearchOps.mainThreadHTTP(), labels: labels) ?? node.app ?? "?")
                              + " :\(node.httpPort)", tint: node.isActive ? .weaveAccent : .weaveInk)
                     }
                 }

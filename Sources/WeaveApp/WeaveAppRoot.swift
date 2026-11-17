@@ -135,6 +135,17 @@ final class WeaveAppRoot {
 
     func confirmRemove(_ name: String) { shell.set(.pendingRemove(name)) }
 
+    func showLabel(_ name: String) { shell.set(.labelSheet(name)) }
+
+    /// What `name` is called now: its AII's label, else its name.
+    func title(of name: String) -> String { fabric.state.title(of: name) }
+
+    /// Names `name`'s AII `text`: the label lives in its home, and the AII says it on /health.
+    func label(_ name: String, as text: String) {
+        shell.set(.labelSheet(nil))
+        run("Label \(name)") { [fabric] in try await fabric.label(name, as: text) }
+    }
+
     func remove(_ name: String) {
         shell.set(.pendingRemove(nil))
         if shell.state.selectedThread == .spawned(name) { shell.set(.select(nil)); explorer.select(nil) }

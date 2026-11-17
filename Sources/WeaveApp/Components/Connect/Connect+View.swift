@@ -31,7 +31,7 @@ extension Connect {
                          : "The port asks for no key: any process on this Mac can use it.")
                     LabeledRow("AII") {
                         Picker("AII", selection: Binding(get: { thread }, set: { connect.set(.thread($0)) })) {
-                            ForEach(fabric.state.threads) { Text($0.name).tag($0.name) }
+                            ForEach(fabric.state.threads) { Text(fabric.state.title(of: $0.name)).tag($0.name) }
                             Text("main AII").tag(ThreadGateway.mainName)
                         }
                     }

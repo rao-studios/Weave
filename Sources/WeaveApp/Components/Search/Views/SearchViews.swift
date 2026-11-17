@@ -10,6 +10,7 @@ import WeaveKit
 struct PartitionLegend: View {
     let state: HostService.Center.State
     let records: [ThreadRecord]
+    var labels: [String: String] = [:]
 
     var body: some View {
         HStack(spacing: 6) {
@@ -20,7 +21,7 @@ struct PartitionLegend: View {
             } else {
                 Text("· fans out to").font(.weaveSans(11)).foregroundStyle(Color.weaveInk.opacity(0.45))
                 ForEach(state.nodes.filter(\.isActive)) { node in
-                    Pill(text: HostOps.name(of: node, records: records, mainThreadHTTP: SearchOps.mainThreadHTTP()) ?? (node.app ?? "node"),
+                    Pill(text: HostOps.name(of: node, records: records, mainThreadHTTP: SearchOps.mainThreadHTTP(), labels: labels) ?? (node.app ?? "node"),
                          tint: .weaveAccent)
                 }
             }
@@ -31,12 +32,14 @@ struct PartitionLegend: View {
 
 struct ResultRow: View {
     let hit: SearchHit
+    /// The AII's label for its id, when it has one.
+    var labels: [String: String] = [:]
 
     var body: some View {
         Card {
             HStack(spacing: 8) {
                 Text("#\(hit.rank)").font(.weaveMono(11)).foregroundStyle(Color.weaveAccent)
-                if let name = hit.threadName { Pill(text: name, tint: .weaveBlue) } else { Pill(text: hit.reference.threadId.map { String($0.prefix(8)) } ?? "?") }
+                if let name = hit.threadName { Pill(text: labels[name] ?? name, tint: .weaveBlue) } else { Pill(text: hit.reference.threadId.map { String($0.prefix(8)) } ?? "?") }
                 Spacer()
                 Text(verbatim: "document \(hit.reference.id.prefix(8))…").font(.weaveMono(9.5)).foregroundStyle(Color.weaveInk.opacity(0.35))
                     .help(hit.reference.id)

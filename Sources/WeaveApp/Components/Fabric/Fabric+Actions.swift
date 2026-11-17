@@ -22,6 +22,7 @@ extension Fabric {
         case .weaveOut: root.setWoven(action.name, false)
         case .host: root.selectHost(.spawned(action.name))
         case .connect: root.showConnect(action.name)
+        case .label: root.showLabel(action.name)
         }
     }
 }

@@ -31,7 +31,7 @@ extension Fabric {
                     }
                 }
 
-                HostPicker(state: h, records: f.threads)
+                HostPicker(state: h, records: f.threads, labels: f.labels)
                     .onBubble {
                         On(.hostPickerSelect, HostSelection.self) { WeaveAppRoot.shared.selectHost($0) }
                     }
@@ -90,7 +90,7 @@ extension Fabric {
 
     private func row(_ record: ThreadRecord, _ style: ThreadRow.Style,
                      _ f: FabricService.Center.State, _ h: HostService.Center.State) -> some View {
-        ThreadRow(record: record, status: f.status(of: record.name), embedder: f.embedder[record.name],
+        ThreadRow(record: record, title: f.title(of: record.name), status: f.status(of: record.name), embedder: f.embedder[record.name],
                   extractor: f.extractor[record.name], counts: f.counts[record.name], shape: f.shapes[record.name],
                   isHost: h.selection == .spawned(record.name), busy: f.isBusy(record.name),
                   needsReseed: f.reseed.contains(record.name), registered: registered(record, h), style: style)

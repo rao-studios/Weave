@@ -53,6 +53,43 @@ import WeaveKitTestSupport
         #expect(state.threads.isEmpty && state.status.isEmpty)
     }
 
+    @Test func anAIIIsShownByItsOwnLabelAndItsNameStaysItsHandle() {
+        var state = FabricService.Center.State()
+        let scan = FabricScan(root: "/r", fingerprint: "abcd1234", records: [Fixtures.record("alpha"), Fixtures.record("beta", slot: 2)],
+                              shapes: [:], reseed: [], serverBinary: "/bin/AIIServer", serverInstalled: true, legacyNote: nil,
+                              labels: ["alpha": "Apple Reasoning", "gone": "Gone"])
+        FabricOps.apply(.scanned(scan), to: &state)
+        let rows: [(label: String, name: String, title: String)] = [
+            ("its label", "alpha", "Apple Reasoning"),
+            ("no label: its name", "beta", "beta"),
+        ]
+        for row in rows { #expect(state.title(of: row.name) == row.title, Comment(rawValue: row.label)) }
+        #expect(state.labels["gone"] == nil, "a label is kept only for an instance the scan read")
+
+        FabricOps.apply(.label("beta", "Beta Notes"), to: &state)
+        #expect(state.title(of: "beta") == "Beta Notes")
+        FabricOps.apply(.probe("alpha", ThreadProbe(status: .up(pid: 3), embedder: nil, extractor: nil, counts: nil, label: "Apple")), to: &state)
+        #expect(state.title(of: "alpha") == "Apple", "a label set with `aii label` while Weave runs is read at the next probe")
+        FabricOps.apply(.removed("alpha"), to: &state)
+        #expect(state.labels["alpha"] == nil)
+        #expect(state.threads.map(\.name) == ["beta"], "the handle is never renamed")
+    }
+
+    @Test func aThreadAnotherLauncherStartedAgainIsStoppedByItsRunRecord() throws {
+        let scratch = Scratch("weave-ops-tests"); defer { scratch.clean() }
+        let home = AIIHome(root: scratch.url.appendingPathComponent("home", isDirectory: true))
+        #expect(!FabricOps.startedElsewhere(home: home, held: 42), "no run record: nothing else runs it")
+        let me = ProcessProbe.current
+        try RunRecord(process: me, binary: ProcessProbe.executablePath(of: me.pid) ?? "", ports: AIIPorts(http: 1, grpc: 2),
+                      launcher: nil, startedAt: Date()).write(home.threadRunRecord)
+        let rows: [(label: String, held: Int32?, elsewhere: Bool)] = [
+            ("the handle holds what the run record names", me.pid, false),
+            ("the handle holds a process that is gone", 999_999, true),
+            ("no handle", nil, true),
+        ]
+        for row in rows { #expect(FabricOps.startedElsewhere(home: home, held: row.held) == row.elsewhere, Comment(rawValue: row.label)) }
+    }
+
     @Test func aRecordIsReplacedInPlace() {
         var state = FabricService.Center.State()
         FabricOps.apply(.record(Fixtures.record("alpha")), to: &state)
@@ -84,6 +121,8 @@ import WeaveKitTestSupport
         #expect(HostOps.name(of: Fixtures.node("x", httpPort: 47611), records: records, mainThreadHTTP: 47081) == "alpha")
         #expect(HostOps.name(of: Fixtures.node("y", httpPort: 47081, app: "aii"), records: records, mainThreadHTTP: 47081) == "main AII")
         #expect(HostOps.name(of: Fixtures.node("z", httpPort: 9), records: records, mainThreadHTTP: 47081) == nil)
+        #expect(HostOps.name(of: Fixtures.node("x", httpPort: 47611), records: records, mainThreadHTTP: 47081,
+                             labels: ["alpha": "Apple Reasoning"]) == "Apple Reasoning", "shown by its AII's label")
     }
 }
 

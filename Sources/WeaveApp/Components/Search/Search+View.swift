@@ -26,7 +26,7 @@ extension Search {
                             .disabled(state.draft.trimmingCharacters(in: .whitespaces).isEmpty || s.searching || h.target == nil)
                         if s.searching { ProgressView().controlSize(.small) }
                     }
-                    PartitionLegend(state: h, records: fabric.state.threads)
+                    PartitionLegend(state: h, records: fabric.state.threads, labels: fabric.state.labels)
                 }
 
                 ErrorLine(message: s.lastError)
@@ -38,7 +38,7 @@ extension Search {
                         Spacer()
                         if let latency = s.latencyMs { Text(Formatters.ms(latency)).font(.weaveMono(11)).foregroundStyle(Color.weaveInk.opacity(0.5)) }
                     }
-                    ForEach(s.hits) { hit in ResultRow(hit: hit) }
+                    ForEach(s.hits) { hit in ResultRow(hit: hit, labels: fabric.state.labels) }
                     if let graph = s.graph, !graph.matchedEntityIds.isEmpty {
                         Text("The graph matched \(graph.matchedEntityIds.count) entities and expanded \(graph.expandedDocuments) documents.")
                             .font(.weaveSans(11)).foregroundStyle(Color.weaveInk.opacity(0.5))

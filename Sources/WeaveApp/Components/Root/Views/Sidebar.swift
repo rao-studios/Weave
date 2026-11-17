@@ -39,7 +39,7 @@ struct Sidebar: View {
                 VStack(spacing: 2) {
                     threadRow(.main, title: "main AII", subtitle: "~/.rao", status: mainStatus, isHost: host.state.selection == .main)
                     ForEach(fabric.state.threads) { record in
-                        threadRow(.spawned(record.name), title: record.name, subtitle: "\(record.threadHTTP)",
+                        threadRow(.spawned(record.name), title: fabric.state.title(of: record.name), subtitle: "\(record.threadHTTP)",
                                   status: StatusDot.State(fabric.state.status(of: record.name)),
                                   isHost: host.state.selection == .spawned(record.name), woven: record.woven)
                     }

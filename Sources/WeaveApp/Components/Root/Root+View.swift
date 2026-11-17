@@ -70,6 +70,13 @@ extension Root {
                  ? "This stops and deletes every AII Weave spawned, in Weave's folder and in a custom location (only what Weave made there), deletes Weave's folder, and takes Weave's secret and lane out of ~/.rao. The main AII and the shared models stay. Weave then quits; drag it to the Trash to finish."
                  : "This stops and deletes every AII Weave spawned: their indexes, graphs and secrets. The shared models stay.")
         }
+        .sheet(item: Binding(get: { shell.state.labelSheet.map(LabelTarget.init) }, set: { if $0 == nil { shell.set(.labelSheet(nil)) } })) { target in
+            LabelSheet(name: target.name, current: WeaveAppRoot.shared.title(of: target.name))
+                .onBubble {
+                    On(.labelSheetSubmit, LabelRequest.self) { request in WeaveAppRoot.shared.label(request.name, as: request.label) }
+                    On(.labelSheetCancel) { shell.set(.labelSheet(nil)) }
+                }
+        }
         .sheet(isPresented: Binding(get: { shell.state.spawnSheet }, set: { shell.set(.spawnSheet($0)) })) {
             SpawnSheet(defaultBackend: settings.state.defaultGraphBackend, root: settings.state.rootFolder)
                 .onBubble {

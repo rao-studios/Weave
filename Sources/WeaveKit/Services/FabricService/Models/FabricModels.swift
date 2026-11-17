@@ -61,6 +61,8 @@ public struct ThreadProbe: Sendable, Equatable {
     public var embedder: ThreadEmbedderState?
     public var extractor: String?
     public var counts: ThreadCounts?
+    /// The AII's own label (its home's `aii/label.json`), as the probe read it; nil when it has none.
+    public var label: String? = nil
 }
 
 /// What a scan of the fabric's folder found.
@@ -73,6 +75,8 @@ public struct FabricScan: Sendable, Equatable {
     public var serverBinary: String
     public var serverInstalled: Bool
     public var legacyNote: String?
+    /// Each AII's own label, by name: a home with none was given its name at the scan.
+    public var labels: [String: String] = [:]
 }
 
 extension FabricService {

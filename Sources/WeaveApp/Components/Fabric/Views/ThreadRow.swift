@@ -14,7 +14,7 @@ import WeaveKit
 
 /// What a card asks for, routed by the Fabric page.
 struct ThreadRowAction: Sendable, Equatable {
-    enum Kind: Sendable, Equatable { case start, stop, restart, explore, remove, reveal, weaveIn, weaveOut, host, connect }
+    enum Kind: Sendable, Equatable { case start, stop, restart, explore, remove, reveal, weaveIn, weaveOut, host, connect, label }
     let name: String
     let kind: Kind
 }
@@ -24,6 +24,8 @@ struct ThreadRow: View {
     enum Style { case card, row }
 
     let record: ThreadRecord
+    /// What it is called: its AII's label, else its name.
+    let title: String
     let status: ThreadStatus
     let embedder: ThreadEmbedderState?
     let extractor: String?
@@ -104,8 +106,12 @@ struct ThreadRow: View {
     private var identity: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
-                Text(record.name).font(.weaveSerif(19, weight: .medium, italic: true)).foregroundStyle(Color.weaveInk)
+                Text(title).font(.weaveSerif(19, weight: .medium, italic: true)).foregroundStyle(Color.weaveInk)
                 if isHost { Pill(text: "host", tint: .weaveAccent) }
+                if title != record.name {
+                    Text(verbatim: record.name).font(.weaveMono(10.5)).foregroundStyle(Color.weaveInk.opacity(0.45))
+                        .help("Its handle: the folder, route and deposit group Weave knows it by")
+                }
             }
             HStack(spacing: 6) {
                 StatusDot(state: StatusDot.State(status), size: 6)
@@ -183,6 +189,7 @@ struct ThreadRow: View {
 
     private var menu: some View {
         Menu {
+            Button("Label…") { send(.label) }
             Button("Request Examples…") { send(.connect) }
             Button("Make Host") { send(.host) }.disabled(isHost)
             Button("Reveal Home in Finder") { send(.reveal) }

@@ -59,6 +59,33 @@ extension ServicesOnScratch {
             #expect(!FileManager.default.fileExists(atPath: record.home))
         }
 
+        @Test func anAIIIsLabelledAtSpawnBackfilledAtAScanAndRelabelledInItsHome() async throws {
+            let root = TestRoot.shared
+            let scratch = root.boot(); defer { scratch.clean() }
+            try await root.fabric.scan(root: scratch.root.path)
+            let alpha = try await root.fabric.spawn(name: "alpha", graphBackend: "keyword")
+            #expect(AIILabel.read(home: alpha.aiiHome) == "alpha", "named as it was spawned")
+
+            // An AII with a label of its own keeps it; one with none is given its name.
+            let beta = try await root.fabric.spawn(name: "beta", graphBackend: "keyword")
+            AIILabel.clear(home: beta.aiiHome)
+            try AIILabel.write("Apple Reasoning", home: alpha.aiiHome)
+            let scan = try await root.fabric.scan(root: scratch.root.path)
+            #expect(scan.labels == ["alpha": "Apple Reasoning", "beta": "beta"])
+            #expect(AIILabel.read(home: alpha.aiiHome) == "Apple Reasoning", "the AII's label is never changed by a scan")
+            #expect(AIILabel.read(home: beta.aiiHome) == "beta")
+            await Task.yield()
+            #expect(root.fabric.state.title(of: "alpha") == "Apple Reasoning")
+
+            try await root.fabric.label("beta", as: "  Beta Notes ")
+            await Task.yield()
+            #expect(AIILabel.read(home: beta.aiiHome) == "Beta Notes")
+            #expect(root.fabric.state.title(of: "beta") == "Beta Notes")
+            #expect(root.fabric.state.busy.isEmpty)
+            await #expect(throws: AIILabelError.invalid("a\nb")) { try await root.fabric.label("beta", as: "a\nb") }
+            #expect(root.fabric.state.record("beta") != nil, "the handle stays")
+        }
+
         @Test func startingWithoutAnInstalledServerSaysSo() async throws {
             let root = TestRoot.shared
             let scratch = root.boot(); defer { scratch.clean() }

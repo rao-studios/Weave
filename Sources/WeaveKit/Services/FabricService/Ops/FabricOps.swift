@@ -28,6 +28,7 @@ public enum FabricOps {
             state.shapes = scan.shapes
             state.reseed = scan.reseed
             let names = Swift.Set(scan.records.map(\.name))
+            state.labels = scan.labels.filter { names.contains($0.key) }
             state.status = state.status.filter { names.contains($0.key) }
             state.embedder = state.embedder.filter { names.contains($0.key) }
             state.extractor = state.extractor.filter { names.contains($0.key) }
@@ -44,6 +45,7 @@ public enum FabricOps {
             state.extractor[name] = nil
             state.counts[name] = nil
             state.shapes[name] = nil
+            state.labels[name] = nil
             state.reseed.remove(name)
         case .probe(let name, let probe):
             // A busy instance is mid-verb: its verb writes its status, a stale probe does not.
@@ -51,6 +53,9 @@ public enum FabricOps {
             state.embedder[name] = probe.embedder
             state.extractor[name] = probe.extractor
             if let counts = probe.counts { state.counts[name] = counts }
+            state.labels[name] = probe.label
+        case .label(let name, let label):
+            state.labels[name] = label
         case .status(let name, let status):
             state.status[name] = status
         case .shape(let name, let shape):
@@ -89,14 +94,24 @@ public enum FabricOps {
         let records = FabricRoot.records(root: root)
         var shapes: [String: LaunchShape] = [:]
         var reseed: Swift.Set<String> = []
+        var labels: [String: String] = [:]
         for record in records {
             shapes[record.name] = LaunchShape.load(home: record.aiiHome)
+            labels[record.name] = label(of: record)
             if !FabricSeeding.verify(home: record.aiiHome, fabric: fabric) { reseed.insert(record.name) }
         }
         let binary = ThreadLauncher.serverBinary(main: main)
         return FabricScan(root: root.path, fingerprint: FabricSeeding.fingerprint(fabric), records: records, shapes: shapes,
                           reseed: reseed, serverBinary: binary.path,
-                          serverInstalled: FileManager.default.isExecutableFile(atPath: binary.path), legacyNote: legacyNote)
+                          serverInstalled: FileManager.default.isExecutableFile(atPath: binary.path), legacyNote: legacyNote,
+                          labels: labels)
+    }
+
+    /// The AII's own label. The AII's says what it is called, so Weave shows it and never changes it;
+    /// a home with none is given the record's name, once, so every AII Weave spawned has one.
+    public static func label(of record: ThreadRecord) -> String? {
+        if let label = AIILabel.read(home: record.aiiHome) { return label }
+        return try? AIILabel.write(record.name, home: record.aiiHome)
     }
 
     // MARK: - Probe
@@ -122,7 +137,8 @@ public enum FabricOps {
         if status.isUp, let client = try? ThreadHTTPClient.forHome(home, port: record.threadHTTP) {
             counts = (try? await client.stats()).map(ThreadCounts.init)
         }
-        return ThreadProbe(status: status, embedder: health.embedder, extractor: health.extractor, counts: counts)
+        return ThreadProbe(status: status, embedder: health.embedder, extractor: health.extractor, counts: counts,
+                           label: AIILabel.read(home: home))
     }
 
     /// One probe of every idle Thread, written through `set`.
@@ -177,6 +193,8 @@ public enum FabricOps {
                                   aiiHomePath: apart ? home.root.path : nil)
         try ThreadLauncher.config(for: record).write(home: home)
         try record.write()
+        // Named as it was spawned: the AII says this label until someone gives it another.
+        _ = try? AIILabel.write(name, home: home)
         return record
     }
 
@@ -221,12 +239,25 @@ public enum FabricOps {
     public static func stop(_ record: ThreadRecord) async {
         let home = record.aiiHome
         if let server = FabricService.servers.remove(record.name) {
-            await server.stop(grace: stopGrace)
+            if await startedElsewhere(home: home, held: server.current?.pid) {
+                // Another launcher started it again since this one did (a relaunch from another app):
+                // the run record names what runs, and the handle a process that is gone.
+                await server.forget()
+                await Task.detached { ManagedServer.stopRecordedSync(home.threadRunRecord, grace: stopGrace) }.value
+            } else {
+                await server.stop(grace: stopGrace)
+            }
         } else {
             await Task.detached { ManagedServer.stopRecordedSync(home.threadRunRecord, grace: stopGrace) }.value
         }
         await waitForPorts(of: record)
         LaunchShape.remove(home: home)
+    }
+
+    /// Whether the home's run record names a live process other than `held`, the one Weave's handle holds.
+    static func startedElsewhere(home: AIIHome, held: Int32?) -> Bool {
+        guard let recorded = RunRecord.load(home.threadRunRecord), ProcessProbe.isRunning(recorded.process) else { return false }
+        return recorded.process.pid != held
     }
 
     /// Waits until nothing listens on the record's HTTP or gRPC port, up to `portsWindow`.

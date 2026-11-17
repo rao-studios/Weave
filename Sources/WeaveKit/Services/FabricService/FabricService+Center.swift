@@ -22,6 +22,8 @@ extension FabricService {
             public var extractor: [String: String] = [:]
             public var counts: [String: ThreadCounts] = [:]
             public var shapes: [String: LaunchShape] = [:]
+            /// Each AII's own label, by name: what its home's `aii/label.json` says, and what Weave shows.
+            public var labels: [String: String] = [:]
             /// Homes whose stack secret is no longer the FABRIC secret: re-seeded at their next start.
             public var reseed: Swift.Set<String> = []
             /// The request each instance is busy with, by name.
@@ -40,6 +42,9 @@ extension FabricService {
             public func record(_ name: String) -> ThreadRecord? { threads.first { $0.name == name } }
             public func status(of name: String) -> ThreadStatus { status[name] ?? .stopped(nil) }
             public func isBusy(_ name: String) -> Bool { busy[name] != nil }
+            /// What a person reads for an AII: its own label, else its name. The name stays its handle
+            /// (folder, route, deposit group); only this is shown.
+            public func title(of name: String) -> String { labels[name] ?? name }
             /// Every port the records hold.
             public var takenPorts: Swift.Set<Int> { Swift.Set(threads.flatMap(\.ports)) }
         }
@@ -51,6 +56,7 @@ extension FabricService {
         @Event public var stop: Stop.Reducer
         @Event public var weave: Weave.Reducer
         @Event public var remove: Remove.Reducer
+        @Event public var label: Label.Reducer
         @Event public var watch: Watch.Reducer
         @Store public var state: State
         public init() {}

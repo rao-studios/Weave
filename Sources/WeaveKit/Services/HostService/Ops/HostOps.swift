@@ -124,9 +124,10 @@ public enum HostOps {
     }
 
     /// The Weave name for a node the host sees: the spawned AII whose Thread listens on its HTTP
-    /// port, "main AII" for the main AII's Thread.
-    public static func name(of node: HostNode, records: [ThreadRecord], mainThreadHTTP: Int?) -> String? {
-        if let record = records.first(where: { $0.threadHTTP == node.httpPort }) { return record.name }
+    /// port (its label when `labels` has one), "main AII" for the main AII's Thread.
+    public static func name(of node: HostNode, records: [ThreadRecord], mainThreadHTTP: Int?,
+                            labels: [String: String] = [:]) -> String? {
+        if let record = records.first(where: { $0.threadHTTP == node.httpPort }) { return labels[record.name] ?? record.name }
         if let mainThreadHTTP, node.httpPort == mainThreadHTTP { return "main AII" }
         return nil
     }

@@ -12,7 +12,7 @@ extension Explorer {
         let e = explorer.state
         return VStack(alignment: .leading, spacing: 14) {
             PageHeader(title: "Explorer", subtitle: subtitle) {
-                ThreadPicker(selected: shell.state.selectedThread, records: fabric.state.threads)
+                ThreadPicker(selected: shell.state.selectedThread, records: fabric.state.threads, labels: fabric.state.labels)
                     .onBubble { On(.threadPickerSelect, ThreadRef.self) { WeaveAppRoot.shared.explore($0) } }
             }
             if let ref = e.selected {
@@ -47,7 +47,7 @@ extension Explorer {
         case .main: return "The main AII's Thread, Weave's lane"
         case .spawned(let name):
             guard let record = fabric.state.record(name) else { return name }
-            return "\(name) · http \(record.threadHTTP) · grpc \(record.threadGRPC) · \(record.home)"
+            return "\(fabric.state.title(of: name)) · http \(record.threadHTTP) · grpc \(record.threadGRPC) · \(record.home)"
         }
     }
 

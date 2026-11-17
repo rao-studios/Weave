@@ -22,6 +22,7 @@ extension FabricService {
                 case probe(String, ThreadProbe)
                 case status(String, ThreadStatus)
                 case shape(String, LaunchShape?)
+                case label(String, String?)
                 case reseeded(String)
                 case idle(String)
                 case loop(Bool, interval: Double)

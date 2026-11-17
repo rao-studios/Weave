@@ -14,6 +14,8 @@ extension ShellService {
             var sidebarVisible = true
             var spawnSheet = false
             var pendingRemove: String?
+            /// The instance whose AII the Label sheet names, while it shows.
+            var labelSheet: String?
             var pendingStorage: StorageAction?
             var selectedThread: ThreadRef?
             var error: AppError?
